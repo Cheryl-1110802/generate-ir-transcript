@@ -10,6 +10,9 @@ from datetime import datetime, date
 from num2words import num2words
 from .data_parser import TranscriptParser, ManagementReportParser
 from .history_utils import check_if_history_already_updated, mark_history_as_updated
+from .snapshot_utils import (
+    get_stale_sheets, mark_stale_values, color_stale_paragraphs, SNAPSHOT_FILENAME
+)
 
 # 使用絕對路徑 import configs.constant
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -87,7 +90,7 @@ def get_previous_quarter_end_date(this_quarter, this_year):
         last_day = 30
     return f"{year}-{end_month:02d}-{last_day:02d}"
 
-def create_transcript_context(config, lang, this_quarter):
+def create_transcript_context(lang, this_quarter, this_year, event_date):
     # quarter_map 設定
     quarter_map = {
         "en": {
@@ -119,10 +122,10 @@ def create_transcript_context(config, lang, this_quarter):
     context = {}
     if lang == "en":
         # 自動組合 event_quarter 例如 2Q25
-        quarter_num = str(config["this_quarter"]).replace("Q", "")
-        year_short = str(config["this_year"])[-2:]
+        quarter_num = str(this_quarter).replace("Q", "")
+        year_short = str(this_year)[-2:]
         context["event_quarter"] = f"{quarter_num}Q{year_short}"
-        context["event_date"] = format_date(config["event_date"])
+        context["event_date"] = format_date(event_date)
         context["this_quarter_en"] = quarter_map["en"].get(this_quarter, this_quarter)
         context["ytd"] = ytd_map["en"].get(this_quarter, "")
         context["chairman"] = constant.CHAIRMAN_EN
@@ -131,7 +134,7 @@ def create_transcript_context(config, lang, this_quarter):
         context["chairman_name"] = constant.CHAIRMAN_FIRST_NAME
         context["president_name"] = constant.PRESIDENT_FIRST_NAME
     else:
-        context["event_date_zh"] = format_date_zh(config["event_date"])
+        context["event_date_zh"] = format_date_zh(event_date)
         context["this_quarter_zh"] = quarter_map["zh"].get(this_quarter, this_quarter)
         context["ytd"] = ytd_map["zh"].get(this_quarter, "")
         context["chairman"] = constant.CHAIRMAN
@@ -139,7 +142,7 @@ def create_transcript_context(config, lang, this_quarter):
         context["financial_officer"] = constant.FINANCIAL_OFFICER
     return context
 
-def create_management_context(config, this_year, this_quarter):
+def create_management_context(event_date, this_year, this_quarter):
     quarter_map = {
         "Q1": "first quarter",
         "Q2": "second quarter",
@@ -165,7 +168,7 @@ def create_management_context(config, this_year, this_quarter):
     }
     # Management report 專用的 context
     context = {}
-    context["event_date"] = format_date(config["event_date"])
+    context["event_date"] = format_date(event_date)
     context["this_quarter_en"] = quarter_map.get(this_quarter, this_quarter)
     context["ytd"] = ytd_map.get(this_quarter, "")
     context["this_fiscal_quarter"] = fiscal_quarter_map.get(this_quarter, "")
@@ -175,16 +178,17 @@ def create_management_context(config, this_year, this_quarter):
     context["previous_quarter_end_date"] = format_date(previous_quarter_end)
     return context
 
-def build_context(config, xls, this_quarter, this_year, parser, should_save_history=True):
+def build_context(data_config, xls, this_quarter, this_year, parser, event_date, should_save_history=True, stale_sheets=None):
     # 這裡 parser 可能是 TranscriptParser 或 ManagementReportParser
     shared_context = {}
     transcript_context = {}
     management_context = {}
 
     # 共用欄位
+    # use explicit quarter/year passed from quarter_config.json
     shared_context = {
-        "this_quarter": config["this_quarter"],
-        "this_year": config["this_year"],
+        "this_quarter": this_quarter,
+        "this_year": this_year,
         "this_quarter_year": f"{this_quarter} {this_year}",
         "previous_year": str(int(this_year) - 1)
     }
@@ -194,19 +198,21 @@ def build_context(config, xls, this_quarter, this_year, parser, should_save_hist
 
     # 由 parser 產生各自專屬欄位
     if isinstance(parser, TranscriptParser) and not isinstance(parser, ManagementReportParser):
-        context = create_transcript_context(config, parser.lang, this_quarter)
+        context = create_transcript_context(parser.lang, this_quarter, this_year, event_date)
         transcript_context.update(context)
     elif isinstance(parser, ManagementReportParser):
-        context = create_management_context(config, this_year, this_quarter)
+        context = create_management_context(event_date, this_year, this_quarter)
         management_context.update(context)
 
     # parse each sheet
-    for sheet_name, prefix in config["sheet_mapping"].items():
+    for sheet_name, prefix in data_config["sheet_mapping"].items():
         df = xls.parse(sheet_name, index_col=0, header=0)
         
         if sheet_name == "future_outlook":
             # 使用同樣的 parser，不需要分別判斷
             parsed = parser.parse_opening_remarks(df)
+            if stale_sheets and sheet_name in stale_sheets:
+                parsed = mark_stale_values(parsed)
             transcript_context[sheet_name] = parsed
             management_context[sheet_name] = parsed
                 
@@ -214,12 +220,16 @@ def build_context(config, xls, this_quarter, this_year, parser, should_save_hist
             # 兩種 parser 都處理，但可能有不同的實作
             if isinstance(parser, TranscriptParser) and not isinstance(parser, ManagementReportParser):
                 parsed = parser.parse_new_tapeouts(df)
+                if stale_sheets and sheet_name in stale_sheets:
+                    parsed = mark_stale_values(parsed)
                 transcript_context[sheet_name] = parsed
                 
             elif isinstance(parser, ManagementReportParser):
                 # 為 ManagementReportParser 添加歷史數據文件路徑
                 history_file_path = os.path.join(get_output_path(), "new_tapeouts_history.json")
                 parsed = parser.parse_new_tapeouts(df, history_file_path, should_save_history)  # 傳遞 should_save_history 參數
+                if stale_sheets and sheet_name in stale_sheets:
+                    parsed = mark_stale_values(parsed)
                 management_context[sheet_name] = parsed
                 
         elif sheet_name in ["financial_results", "revenue_streams", "tech", "wafer_size", "opening_remarks", "chairman_remarks"]:
@@ -227,6 +237,8 @@ def build_context(config, xls, this_quarter, this_year, parser, should_save_hist
             if isinstance(parser, TranscriptParser) and not isinstance(parser, ManagementReportParser):
                 if hasattr(parser, f"parse_{sheet_name}"):
                     parsed = getattr(parser, f"parse_{sheet_name}")(df)
+                    if stale_sheets and sheet_name in stale_sheets:
+                        parsed = mark_stale_values(parsed)
                     transcript_context[sheet_name] = parsed
 
         else:
@@ -240,6 +252,8 @@ def build_context(config, xls, this_quarter, this_year, parser, should_save_hist
                 else:
                     # 對於其他未明確定義的sheet，使用 parse_remaining_information
                     parsed = parser.parse_remaining_information(df, sheet_name)
+                if stale_sheets and sheet_name in stale_sheets:
+                    parsed = mark_stale_values(parsed)
                 management_context[sheet_name] = parsed  
     return transcript_context, management_context
 
@@ -274,24 +288,58 @@ def generate_report(context, template_path, output_path):
         return False  # 返回失敗標誌    
 
 def main(excel_path=None, selected_reports=None):
-    # 使用資源路徑函數來獲取配置檔案的正確路徑
-    config_path = get_resource_path("configs/config.json")
+    # 讀取季度／年度設定（例如 this_quarter, this_year）
+    config_path = get_resource_path("configs/quarter_config.json")
     with open(config_path, encoding='utf-8') as f:
-        config = json.load(f)
+        quarter_config = json.load(f)
 
-    # 設定法說會季度和年份
+    # 讀取資料相關設定（例如 input_excel_path、其他路徑或參數）
+    data_config_path = get_resource_path("configs/data_config.json")
+    with open(data_config_path, encoding='utf-8') as f:
+        data_config = json.load(f)
+
     # 直接從 config 讀取 this_quarter 和 this_year
-    this_quarter = config.get("this_quarter", "Q2")
-    this_year = config.get("this_year", "2025")
+    this_quarter = quarter_config["this_quarter"]
+    this_year = quarter_config["this_year"]
+    event_date = quarter_config.get("event_date", "")
 
-    # input data - 如果有提供 excel_path 就使用它，否則使用 config 中的路徑
+    # input data - 如果有提供 excel_path 就使用它，否則嘗試從 scripts/document_update/input/ 取得最新的 Excel 檔
     if excel_path:
         xls = pd.ExcelFile(excel_path)
     else:
-        # 使用資源路徑函數來獲取輸入檔案的完整路徑
-        input_path = get_resource_path(config["input_excel_path"])
-        xls = pd.ExcelFile(input_path)
+        # 嘗試在專案的 input 目錄尋找最近的 .xls/.xlsx 檔案
+        script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        input_dir = os.path.join(script_dir, "input")
+        excel_candidates = []
+        if os.path.isdir(input_dir):
+            for name in os.listdir(input_dir):
+                if name.lower().endswith(('.xls', '.xlsx')):
+                    excel_candidates.append(os.path.join(input_dir, name))
+
+        if excel_candidates:
+            # 選最新修改時間的檔案
+            excel_candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+            chosen = excel_candidates[0]
+            print(f"使用 input 資料檔: {chosen}")
+            xls = pd.ExcelFile(chosen)
+        else:
+            raise FileNotFoundError(
+                "找不到 Excel 輸入檔 (沒有傳入 excel_path，且 scripts/document_update/input/ 內無 .xls/.xlsx)。"
+                " 請傳入 excel_path 或把檔案放到 scripts/document_update/input/，或在 data_config.json 中加入 'input_excel_path'。"
+            )
     
+    # ── 快照比對：找出未更新的 sheet（顯示為紅字）────────────────────────────
+    snapshot_path = os.path.join(get_output_path(), SNAPSHOT_FILENAME)
+    sheet_names = list(data_config["sheet_mapping"].keys())
+    stale_sheets = get_stale_sheets(
+        excel_path if excel_path else "", sheet_names,
+        this_quarter, str(this_year), snapshot_path
+    )
+    if stale_sheets:
+        print(f"⚠️ 以下 sheet 與上季快照相同，將以紅字標記: {sorted(stale_sheets)}")
+    else:
+        print("✓ 所有 sheet 已更新（或為首次執行），不標記紅字")
+
     # output - 使用正確的輸出路徑函數
     today = date.today().isoformat()
     output_dir = get_output_path()
@@ -312,9 +360,7 @@ def main(excel_path=None, selected_reports=None):
         outputs = all_outputs  # 預設產生所有報告
     
     print(f"產出檔案: {[output[0] for output in outputs]}")
-    
-    # 獲取法說會日期
-    event_date = config.get("event_date", "")
+
     
     # 檢查 new_tapeouts 歷史數據是否已經針對這次法說會更新過
     history_file_path = os.path.join(get_output_path(), "new_tapeouts_history.json")
@@ -329,11 +375,11 @@ def main(excel_path=None, selected_reports=None):
     history_updated_this_run = False
 
     for name, output_path, lang, ParserClass in outputs:
-        parser = ParserClass(lang, this_quarter, this_year, config)
+        parser = ParserClass(lang, this_quarter, this_year, data_config)
         
         # 對於 ManagementReportParser，先嘗試不保存歷史數據生成 context
         should_save_history = False if isinstance(parser, ManagementReportParser) else True
-        transcript_context, management_context = build_context(config, xls, this_quarter, this_year, parser, should_save_history)
+        transcript_context, management_context = build_context(data_config, xls, this_quarter, this_year, parser, event_date, should_save_history, stale_sheets=stale_sheets)
         
         # 根據報告類型選擇對應的 context
         if isinstance(parser, TranscriptParser) and not isinstance(parser, ManagementReportParser):
@@ -342,25 +388,32 @@ def main(excel_path=None, selected_reports=None):
             context = management_context
         else:
             context = transcript_context  # 預設使用 transcript_context
-            
-        # 依照你的模板選擇邏輯取得 template_path
-        if this_quarter == "Q1":
-            tpl_path = config["template_paths"][name].get("Q1")
-        else:
-            tpl_path = config["template_paths"][name].get("default")
         
-        # 使用資源路徑函數來獲取模板的完整路徑
-        tpl_path = get_resource_path(tpl_path)
+        # 取得模板的完整路徑（template_paths 在 data_config 中）
+        tpl_rel = data_config.get("template_paths", {}).get(name)
+        if not tpl_rel:
+            print(f"找不到 template_paths 中對應 {name} 的設定，跳過此報告。")
+            continue
+        tpl_path = get_resource_path(tpl_rel)
         
         # 嘗試渲染 Word 文檔
         render_success = generate_report(context, tpl_path, output_path)
+
+        # 如果有 stale sheet，對渲染完成的 Word 執行紅字著色
+        if render_success and stale_sheets:
+            try:
+                color_stale_paragraphs(output_path)
+                print(f"✓ 紅字標記完成（{len(stale_sheets)} 個 stale sheet）")
+            except Exception as _ce:
+                print(f"⚠️ 紅字著色失敗（不影響主流程）: {_ce}")
+
         
         # 如果是 ManagementReportParser 且渲染成功，執行後續處理
         if isinstance(parser, ManagementReportParser) and render_success:
             # 檢查是否需要更新歷史數據
             if not history_already_updated_for_this_event and not history_updated_this_run:
                 print("正在更新 new_tapeouts 歷史數據...")
-                transcript_context, management_context = build_context(config, xls, this_quarter, this_year, parser, should_save_history=True)
+                transcript_context, management_context = build_context(data_config, xls, this_quarter, this_year, parser, event_date, should_save_history=True, stale_sheets=stale_sheets)
                 context = management_context  # 更新 context 為包含保存歷史數據的版本
                 
                 # 標記歷史數據已更新，傳入 event_date
@@ -383,129 +436,124 @@ def main(excel_path=None, selected_reports=None):
                 word_filename = os.path.basename(output_path)
                 excel_filename = os.path.basename(excel_path) if excel_path else "latest data for transcript & management report.xlsx"
                 
-                # 根據您的新規格配置：
-                # Q2~Q4: index=0: financial_results, index=1: revenue_streams, index=2: tech(單季A1:J8), index=3: tech(年度累計A1:A8+K1:P8), index=4: wafer_size(A1:F4), index=5: new_tech_platform(A1:P4)
-                # Q1: index=0: financial_results, index=1: revenue_streams, index=2: tech(A1:J8), index=3: wafer_size(A1:D4), index=4: new_tech_platform(A1:P4)
-                
-                paste_configs = []
-                
-                if this_quarter == 'Q1':
-                    # Q1 配置
+                # 優先使用 data_config 中的 paste_configs（如果有），否則使用通用的貼上設定
+                paste_configs = data_config.get("paste_configs")
+                if not paste_configs:
                     paste_configs = [
                         {
                             'excel_filename': excel_filename,
                             'sheet_name': 'financial_results',
                             'word_filename': word_filename,
-                            'table_identifier': 0,  # index=0
-                            'cell_range': 'A1:F10',
-                            'start_position': (0, 0),  # 從 (0,0) 開始
-                            'clear_existing': False
-                        },
-                        {
-                            'excel_filename': excel_filename,
-                            'sheet_name': 'revenue_streams',
-                            'word_filename': word_filename,
-                            'table_identifier': 1,  # index=1
-                            'cell_range': 'A1:F4',
-                            'start_position': (0, 0),  # 從 (0,0) 開始
-                            'clear_existing': False
-                        },
-                        {
-                            'excel_filename': excel_filename,
-                            'sheet_name': 'tech',
-                            'word_filename': word_filename,
-                            'table_identifier': 2,  # index=2
-                            'cell_range': 'A1:J8',  # Q1有合併儲存格
-                            'start_position': (0, 0),  # 從 (0,0) 開始
-                            'clear_existing': False
-                        },
-                        {
-                            'excel_filename': excel_filename,
-                            'sheet_name': 'wafer_size',
-                            'word_filename': word_filename,
-                            'table_identifier': 3,  # index=3
-                            'cell_range': 'A1:D4',
-                            'start_position': (0, 0),  # 從 (0,0) 開始
-                            'clear_existing': False
-                        },
-                        {
-                            'excel_filename': excel_filename,
-                            'sheet_name': 'new_tech_platform',
-                            'word_filename': word_filename,
-                            'table_identifier': 4,  # index=4
-                            'cell_range': 'A1:P4',
-                            'start_position': (0, 0),  # 從 (0,0) 開始
-                            'clear_existing': False
-                        }
-                    ]
-                else:
-                    # Q2~Q4 配置
-                    paste_configs = [
-                        {
-                            'excel_filename': excel_filename,
-                            'sheet_name': 'financial_results',
-                            'word_filename': word_filename,
-                            'table_identifier': 0,  # index=0
+                            'table_identifier': 0,
                             'cell_range': 'A1:I10',
-                            'start_position': (0, 0),  # 從 (0,0) 開始
+                            'start_position': (0, 0),
                             'clear_existing': False
                         },
                         {
                             'excel_filename': excel_filename,
                             'sheet_name': 'revenue_streams',
                             'word_filename': word_filename,
-                            'table_identifier': 1,  # index=1
+                            'table_identifier': 1,
                             'cell_range': 'A1:I4',
-                            'start_position': (0, 0),  # 從 (0,0) 開始
+                            'start_position': (0, 0),
+                            'clear_existing': False
+                        },
+                        {
+                            # Revenue Analysis (US$) - 新增的美金表格
+                            'excel_filename': excel_filename,
+                            'sheet_name': 'revenue_streams',
+                            'word_filename': word_filename,
+                            'table_identifier': 2,
+                            'cell_range': 'A6:I9',
+                            'start_position': (0, 0),
                             'clear_existing': False
                         },
                         {
                             'excel_filename': excel_filename,
                             'sheet_name': 'tech',
                             'word_filename': word_filename,
-                            'table_identifier': 2,  # index=2: 單季表格
+                            'table_identifier': 3,
                             'cell_range': 'A1:J8',
-                            'start_position': (0, 0),  # 從 (0,0) 開始
+                            'start_position': (0, 0),
                             'clear_existing': False
                         },
                         {
                             'excel_filename': excel_filename,
                             'sheet_name': 'tech',
                             'word_filename': word_filename,
-                            'table_identifier': 3,  # index=3: 年度累計表格 - rowname部分
-                            'cell_range': 'A1:A8',  # rowname在A1:A8
-                            'start_position': (0, 0),  # 從 (0,0) 開始
+                            'table_identifier': 4,
+                            'cell_range': 'A1:A8',
+                            'start_position': (0, 0),
                             'clear_existing': False
                         },
                         {
                             'excel_filename': excel_filename,
                             'sheet_name': 'tech',
                             'word_filename': word_filename,
-                            'table_identifier': 3,  # index=3: 年度累計表格 - 表格內容部分
-                            'cell_range': 'K1:P8',  # 表格內容在K1:P8 (有合併儲存格)
-                            'start_position': (0, 1),  # 從 (0,1) 開始貼上
+                            'table_identifier': 4,
+                            'cell_range': 'K1:P8',
+                            'start_position': (0, 1),
+                            'clear_existing': False
+                        },
+                        {
+                            # Revenue analysis by technology (US$, main) - 新增的美金表格
+                            'excel_filename': excel_filename,
+                            'sheet_name': 'tech',
+                            'word_filename': word_filename,
+                            'table_identifier': 5,
+                            'cell_range': 'A10:J17',
+                            'start_position': (0, 0),
+                            'clear_existing': False
+                        },
+                        {
+                            # Revenue analysis by technology (US$, YTD side) - 新增的美金表格
+                            'excel_filename': excel_filename,
+                            'sheet_name': 'tech',
+                            'word_filename': word_filename,
+                            'table_identifier': 6,
+                            'cell_range': 'A10:A17',
+                            'start_position': (0, 0),
+                            'clear_existing': False
+                        },
+                        {
+                            'excel_filename': excel_filename,
+                            'sheet_name': 'tech',
+                            'word_filename': word_filename,
+                            'table_identifier': 6,
+                            'cell_range': 'K10:P17',
+                            'start_position': (0, 1),
                             'clear_existing': False
                         },
                         {
                             'excel_filename': excel_filename,
                             'sheet_name': 'wafer_size',
                             'word_filename': word_filename,
-                            'table_identifier': 4,  # index=4
-                            'cell_range': 'A1:F4',  # 有合併儲存格
-                            'start_position': (0, 0),  # 從 (0,0) 開始
+                            'table_identifier': 7,
+                            'cell_range': 'A1:F4',
+                            'start_position': (0, 0),
+                            'clear_existing': False
+                        },
+                        {
+                            # Wafer size (US$) - 新增的美金表格
+                            'excel_filename': excel_filename,
+                            'sheet_name': 'wafer_size',
+                            'word_filename': word_filename,
+                            'table_identifier': 8,
+                            'cell_range': 'A6:F9',
+                            'start_position': (0, 0),
                             'clear_existing': False
                         },
                         {
                             'excel_filename': excel_filename,
                             'sheet_name': 'new_tech_platform',
                             'word_filename': word_filename,
-                            'table_identifier': 5,  # index=5
+                            'table_identifier': 9,
                             'cell_range': 'A1:P4',
-                            'start_position': (0, 0),  # 從 (0,0) 開始
+                            'start_position': (0, 0),
                             'clear_existing': False
                         }
                     ]
-                
+
                 # 執行批量貼上
                 results = integration.batch_paste_excel_to_word(paste_configs)
                 

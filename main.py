@@ -1,10 +1,15 @@
-from gui.interface import launch_gui
+# -*- coding: utf-8 -*-
+# 文件自動更新工具
 import sys
 import os
 import argparse
 
-# 版本資訊 - 每次修改後更新這個版本號
-VERSION = "2.1.0"  # 移除工作流程管理器，回復傳統模式
+# 設定正確的工作目錄為腳本所在目錄
+script_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_dir)
+
+# 版本資訊
+VERSION = "2.1.0"
 
 def get_resource_path(relative_path):
     """獲取資源檔案的絕對路徑，適用於開發環境和 PyInstaller 打包環境"""
@@ -49,33 +54,56 @@ def print_usage():
 文件自動更新工具 v{VERSION}
 
 使用方式:
-1. GUI 模式 (預設，使用智慧工作流程):
+1. 自動處理模式 (使用預設 Excel 檔案):
    python main.py
    
-2. 工作流程模式 (命令列):
-   python main.py --workflow <excel_path> [--previous-word <word_path>] [--reports <report_types>]
+2. 指定 Excel 檔案:
+   python main.py --excel <excel_path> [--reports <report_types>]
    
    範例:
-   python main.py --workflow "input/data.xlsx"
-   python main.py --workflow "input/data.xlsx" --previous-word "output/previous.docx" --reports transcript_en,management_report
-
-3. 傳統模式:
-   python main.py --traditional <excel_path>
+   python main.py --excel "input/data input.xlsx"
+   python main.py --excel "input/data input.xlsx" --reports transcript_en,management_report
 
 參數說明:
-  --workflow       使用新的六步驟工作流程
-  --traditional    使用原有的報告生成方式  
-  --previous-word  上一季講稿路徑 (可選)
+  --excel          指定 Excel 檔案路徑 (預設: input/data input.xlsx)
   --reports        要生成的報告類型，用逗號分隔 (預設: transcript_en,transcript_zh,management_report)
   --help, -h       顯示此說明
 """)
 
+def run_document_update(excel_path=None, selected_reports=None):
+    """執行文件更新"""
+    try:
+        # 預設值
+        if not excel_path:
+            excel_path = os.path.join(script_dir, "input", "data input.xlsx")
+        
+        if not selected_reports:
+            selected_reports = ['transcript_en', 'transcript_zh', 'management_report']
+        
+        # 檢查 Excel 檔案是否存在
+        if not os.path.exists(excel_path):
+            print(f"錯誤: 找不到 Excel 檔案: {excel_path}")
+            return False
+        
+        print(f"=== 開始處理文件更新 ===")
+        print(f"Excel 檔案: {excel_path}")
+        print(f"報告類型: {', '.join(selected_reports)}")
+        
+        from core.report_generator import main
+        main(excel_path, selected_reports)
+        print("文件更新處理完成！")
+        return True
+        
+    except Exception as e:
+        print(f"執行時發生錯誤: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 if __name__ == "__main__":
     # 解析命令列參數
     parser = argparse.ArgumentParser(description=f"文件自動更新工具 v{VERSION}", add_help=False)
-    parser.add_argument('--workflow', help='使用工作流程模式的 Excel 檔案路徑')
-    parser.add_argument('--traditional', help='使用傳統模式的 Excel 檔案路徑')
-    parser.add_argument('--previous-word', help='上一季講稿路徑')
+    parser.add_argument('--excel', help='Excel 檔案路徑')
     parser.add_argument('--reports', help='要生成的報告類型 (逗號分隔)', default='transcript_en,transcript_zh,management_report')
     parser.add_argument('--help', '-h', action='store_true', help='顯示說明')
     
@@ -87,30 +115,11 @@ if __name__ == "__main__":
         print_usage()
         sys.exit(0)
     
-    try:
-        if args.workflow:
-            # 工作流程模式已移除，改用傳統模式
-            print("=== 工作流程模式已移除，使用傳統模式 ===")
-            from core.report_generator import main
-            selected_reports = [r.strip() for r in args.reports.split(',')]
-            main(args.workflow, selected_reports)
-            print("處理完成！")
-                
-        elif args.traditional:
-            # 傳統模式
-            print("=== 使用傳統模式 ===")
-            from core.report_generator import main
-            selected_reports = [r.strip() for r in args.reports.split(',')]
-            main(args.traditional, selected_reports)
-            print("傳統模式處理完成！")
-            
-        else:
-            # GUI 模式 (預設)
-            print("=== 啟動 GUI 介面 ===")
-            launch_gui()
-            
-    except Exception as e:
-        print(f"執行時發生錯誤: {e}")
-        import traceback
-        traceback.print_exc()
-        input("按 Enter 鍵退出...")
+    # 處理報告類型參數
+    selected_reports = [r.strip() for r in args.reports.split(',')]
+    
+    # 執行文件更新
+    success = run_document_update(args.excel, selected_reports)
+    
+    if not success:
+        sys.exit(1)

@@ -1,7 +1,4 @@
 {
-  "this_quarter": "Q2",
-  "this_year": "2025",
-  "event_date": "2025-08-15",
   "sheet_mapping": {
     "opening_remarks": "opening_remarks",
     "financial_results": "financial_results",
@@ -19,18 +16,8 @@
     "employees": "employees"
   },
   "template_paths": {
-    "transcript_en": {
-      "Q1": "templates/transcript_en_template_q1.docx",
-      "default": "templates/transcript_en_template.docx"
-    },
-    "transcript_zh": {
-      "Q1": "templates/transcript_zh_template_q1.docx",
-      "default": "templates/transcript_zh_template.docx"
-    },
-    "management_report": {
-      "Q1": "templates/management_report_template_q1.docx",
-      "default": "templates/management_report_template.docx"
-    }
-  },
-  "input_excel_path": "input/latest data for transcript & management report.xlsx"
+    "transcript_en": "templates/transcript_en_template.docx",
+    "transcript_zh": "templates/transcript_zh_template.docx",
+    "management_report": "templates/management_report_template.docx"
+  }
 }

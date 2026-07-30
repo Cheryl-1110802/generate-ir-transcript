@@ -5,6 +5,22 @@ from datetime import datetime
 from num2words import num2words
 from cn2an import an2cn
 
+def safe_float(val, default=0.0):
+    """將 Excel 讀取的值安全轉為 float；字串/NaN/空值 → default"""
+    if val is None:
+        return default
+    try:
+        import pandas as pd_inner
+        if pd_inner.isna(val):
+            return default
+    except Exception:
+        pass
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return default
+
+
 
 # 換成百分比字串，取到小數點後第一位，如果是 0 就省略
 def format_digits(val, digits=1):
@@ -81,10 +97,29 @@ def use_noun(val):
     except:
         return ""
         
+def safe_int(val, default=0):
+    """將 Excel 讀取的值安全轉為 int；NaN/None/文字 → default"""
+    if val is None:
+        return default
+    try:
+        import math
+        if isinstance(val, float) and math.isnan(val):
+            return default
+    except Exception:
+        pass
+    try:
+        return int(round(float(val)))
+    except (TypeError, ValueError):
+        return default
+
+
 def get_connector(qoq_val, yoy_val):
-    if qoq_val * yoy_val < 0:
-        return "but "
-    else:
+    try:
+        if float(qoq_val) * float(yoy_val) < 0:
+            return "but "
+        else:
+            return "and "
+    except (TypeError, ValueError):
         return "and "
     
 def use_chinese_updown(key=None, val=None):
@@ -114,7 +149,7 @@ class TranscriptParser:
             big_units = ["", "萬", "億", "兆"]
             
             # 將浮點乘上千，代表「千元」轉為「元」
-            num = int(round(float(num) * 1000))
+            num = safe_int(round(safe_float(num) * 1000))
             num_str = str(num).zfill(((len(str(num)) + 3) // 4) * 4)  # 補0到4的倍數
             
             result = []
@@ -150,20 +185,30 @@ class TranscriptParser:
             
         for row_index, row in df.iterrows():
             row_index = str(row_index)
-            key = row_index.strip().lower().replace(" ", "_").replace("\xa0", "")
+
+            # 先刪除括號及括號內的內容
+            key = re.sub(r'\([^)]*\)', '', row_index)  # 刪除小括號 ()
+            key = re.sub(r'\[[^\]]*\]', '', key)  # 刪除中括號 []
+            key = re.sub(r'\{[^}]*\}', '', key)  # 刪除大括號 {}
+            key = re.sub(r'（[^）]*）', '', key)  # 刪除中文括號 （）
+            
+            # 然後處理其他字符替換
+            key = key.strip().lower().replace(" ", "_").replace("\xa0", "").replace("*", "").replace("-", "_")
+            key = key.strip()  # 最後清理前後空格
+            
             
             # Assign Values: Transform and Store in English/Chinese
             val = row.iloc[0]
             qoq = row.iloc[2]
             yoy = row.iloc[4]
 
-            qoq_val = qoq*100
-            yoy_val = yoy*100
+            qoq_val = safe_float(qoq)*100
+            yoy_val = safe_float(yoy)*100
 
             if key in ["revenue", "operating_expenses", "operating_income", "net_income"]:
                 if self.lang == "en":
                     item[f"{key}"] = add_amount_to_item(val, self.lang)
-                    item[f"{key}_abbv"] = str(round(val / 1000)) + " mil"
+                    item[f"{key}_abbv"] = f"{round(val / 1000):,} mil"
 
                     if key in ["revenue", "operating_expenses"]:    
                         item[f"{key}_qoq"] = use_updown(qoq_val)
@@ -178,7 +223,7 @@ class TranscriptParser:
                     item[f"{key}_qoq"] = use_chinese_updown(key, qoq_val)
                     item[f"{key}_yoy"] = use_chinese_updown(key, yoy_val)                   
             elif key == "operating_margin":
-                margin_val = val*100
+                margin_val = safe_float(val)*100
                 item[f"{key}"] = format_digits(margin_val)
                 # 使用新函數提取數值，去掉單位
                 qoq_val = extract_number_from_string(qoq)
@@ -201,23 +246,23 @@ class TranscriptParser:
         item = {}
         for row_index, row in df.iterrows():
             row_index = str(row_index)
-            key = row_index.strip().lower().replace(" ", "_").replace("\xa0", "")
+            key = row_index.strip().lower().replace(" ", "_").replace("\xa0", "").replace("*", "")
 
             # Assign Values
             if key in ["licensing", "royalty"]:
-                val = row.iloc[8]*100
+                val = safe_float(row.iloc[8])*100
                 item[f"{key}"] = format_digits(val)
                 # 年度累積（Q2~Q4才有）
                 if self.this_quarter in ["Q2", "Q3", "Q4"]:
-                    val_ytd = row.iloc[9]*100
+                    val_ytd = safe_float(row.iloc[9])*100
                     item[f"{key}_ytd"] = format_digits(val_ytd)
 
             # Assign QoQ and YoY
             qoq = row.iloc[2]
             yoy = row.iloc[4]
 
-            qoq_val = qoq*100
-            yoy_val = yoy*100
+            qoq_val = safe_float(qoq)*100
+            yoy_val = safe_float(yoy)*100
 
             if self.lang == "en":
                 if key == "licensing":
@@ -239,7 +284,7 @@ class TranscriptParser:
             # 年度累積（Q2~Q4才有）
             if self.this_quarter in ["Q2", "Q3", "Q4"]:
                 yoy_ytd = row.iloc[7]      
-                yoy_ytd_val = yoy_ytd*100         
+                yoy_ytd_val = safe_float(yoy_ytd)*100         
                 
                 if self.lang == "en":
                     if key == "licensing":
@@ -256,18 +301,22 @@ class TranscriptParser:
         item = {}
         for row_index, row in df.iterrows():
             row_index = str(row_index)
-            key = row_index.strip().lower().replace(" ", "_").replace("\xa0", "")
+            key = row_index.strip().lower().replace(" ", "_").replace("\xa0", "").replace("*", "")
             key = re.sub(r'[^a-z0-9_]', '', key)
             if pd.isna(key) or key == "nan":
                 continue  # 跳過這一行
 
             # Assign Values
+            total = row.iloc[0]
             licensing = row.iloc[3]
             royalty = row.iloc[6]
-            licensing_val = licensing*100
-            royalty_val = royalty*100
+
+            total_val = safe_float(total)*100
+            licensing_val = safe_float(licensing)*100
+            royalty_val = safe_float(royalty)*100
 
             if key in ["neobit", "neofuse", "pufbased", "mtp"]:
+                item[f"{key}_total"] = format_digits(total_val)
                 item[f"{key}_licensing"] = format_digits(licensing_val)
                 if key == "pufbased":
                         if royalty <= 1:
@@ -284,10 +333,10 @@ class TranscriptParser:
             royalty_qoq = row.iloc[7]
             royalty_yoy = row.iloc[8]
 
-            licensing_qoq_val = licensing_qoq*100
-            licensing_yoy_val = licensing_yoy*100
-            royalty_qoq_val = royalty_qoq*100
-            royalty_yoy_val = royalty_yoy*100
+            licensing_qoq_val = safe_float(licensing_qoq)*100
+            licensing_yoy_val = safe_float(licensing_yoy)*100
+            royalty_qoq_val = safe_float(royalty_qoq)*100
+            royalty_yoy_val = safe_float(royalty_yoy)*100
 
             
             # QoQ and YoY
@@ -334,14 +383,14 @@ class TranscriptParser:
             # 年度累積（Q2~Q4才有）
             if self.this_quarter in ["Q2", "Q3", "Q4"]:
                 ratio_ytd = row.iloc[9]
-                ratio_ytd_val = ratio_ytd * 100
+                ratio_ytd_val = safe_float(ratio_ytd)*100
                 item[f"{key}_ytd"] = format_digits(ratio_ytd_val)
 
                 licensing_yoy_ytd = row.iloc[12]
                 royalty_yoy_ytd = row.iloc[14]
 
-                licensing_yoy_ytd_val = licensing_yoy_ytd*100
-                royalty_yoy_ytd_val = royalty_yoy_ytd*100
+                licensing_yoy_ytd_val = safe_float(licensing_yoy_ytd)*100
+                royalty_yoy_ytd_val = safe_float(royalty_yoy_ytd)*100
 
                 if self.lang == "en":
                     item[f"{key}_licensing_yoy_ytd"] = use_verb_ed(licensing_yoy_ytd_val)
@@ -369,15 +418,15 @@ class TranscriptParser:
                 continue  # 跳過這一行
 
             val = row.iloc[0]
-            ratio_val = val * 100
+            ratio_val = safe_float(val)*100
 
             item[f"{key}"] = format_digits(ratio_val)
 
             qoq = row.iloc[1]
             yoy = row.iloc[2]
 
-            qoq_val = qoq*100
-            yoy_val = yoy*100
+            qoq_val = safe_float(qoq)*100
+            yoy_val = safe_float(yoy)*100
 
             if self.lang == "en":
                 item[f"{key}_qoq"] = use_updown(qoq_val)
@@ -422,10 +471,10 @@ class TranscriptParser:
         # 如果是數字，則添加千分位分隔符
         try:
             if isinstance(total_value, (int, float)):
-                item["total"] = f"{int(total_value):,}"
+                item["total"] = f"{safe_int(total_value):,}"
             else:
                 # 嘗試轉換為數字
-                num_value = int(float(total_value))
+                num_value = safe_int(total_value)
                 item["total"] = f"{num_value:,}"
         except (ValueError, TypeError):
             # 如果無法轉換為數字，保持原樣
@@ -488,7 +537,7 @@ class ManagementReportParser(TranscriptParser):
             non_zero_rows = [row for row in non_zero_rows if pd.notna(row) and str(row).lower() != 'nan']
 
             # 計算總計，排除 NaN 值
-            total = int(df.loc[non_zero_rows, col_name].sum())
+            total = safe_int(df.loc[non_zero_rows, col_name].sum())
 
             if total > 0:
                 # 生成描述文字，只顯示應用名稱，最後一個前加 "and"
@@ -504,23 +553,23 @@ class ManagementReportParser(TranscriptParser):
                     summary.insert(0, f"{total} tape-out{'s' if total > 1 else ''} at {process} for {app_descriptions_str}")
 
         # 計算當前季度總計
-        current_total = int(df.iloc[0, 0:].sum())
+        current_total = safe_int(df.iloc[0, 0:].sum())
         
         # 根據 should_save_history 決定如何處理歷史總數
         if should_save_history and history_file_path:
             # 需要更新歷史數據：累加當前季度到歷史總數
-            new_history_total = int(history_total + current_total)
+            new_history_total = safe_int(history_total + current_total)
             try:
                 import os
                 os.makedirs(os.path.dirname(history_file_path), exist_ok=True)
                 with open(history_file_path, 'w', encoding='utf-8') as f:
-                    json.dump({"total": int(new_history_total)}, f, ensure_ascii=False, indent=2)
+                    json.dump({"total": safe_int(new_history_total)}, f, ensure_ascii=False, indent=2)
                 print(f"NTO總數已更新: {new_history_total:,} (保存到: {history_file_path})")
             except Exception as e:
                 print(f"保存NTO數據失敗: {e}")
         else:
             # 不需要更新歷史數據：使用現有的歷史總數（本季數據已經包含在內）
-            new_history_total = int(history_total)
+            new_history_total = safe_int(history_total)
             print(f"本季數據已更新過，本次不再更新NTO總數 (維持: {history_total:,})")
 
         item["total"] = f"{current_total:,}"
@@ -541,7 +590,7 @@ class ManagementReportParser(TranscriptParser):
             key = re.sub(r'（[^）]*）', '', key)  # 刪除中文括號 （）
             
             # 然後處理其他字符替換
-            key = key.strip().lower().replace(" ", "_").replace("\xa0", "").replace("-", "_")
+            key = key.strip().lower().replace(" ", "_").replace("\xa0", "").replace("*", "").replace("-", "_")
             key = key.strip()  # 最後清理前後空格
             
             # Assign Values
@@ -549,8 +598,8 @@ class ManagementReportParser(TranscriptParser):
             qoq = row.iloc[5]
             yoy = row.iloc[7]
 
-            qoq_val = qoq*100
-            yoy_val = yoy*100
+            qoq_val = safe_float(qoq)*100
+            yoy_val = safe_float(yoy)*100
 
 
             if key in ["net_revenue", "operating_expenses", "net_profit_shareholders", "interest_income"]:
@@ -583,7 +632,7 @@ class ManagementReportParser(TranscriptParser):
                     item[f"{key}"] = f"a foreign exchange {gain_loss} of NT$ {num:,.2f} million"
 
             elif key == "operating_margin":
-                margin_val = val*100
+                margin_val = safe_float(val)*100
                 item[f"{key}"] = format_digits(margin_val)
 
                 item[f"{key}_qoq"] = use_updown_ppt(qoq_val)
@@ -595,30 +644,36 @@ class ManagementReportParser(TranscriptParser):
             else:
                 continue # 其他 key 不處理，直接跳到下一行
         
-        net_revenue = df.iloc[1, 1]
-        operating_expenses = df.iloc[8, 1]
-        operating_expenses_ratio = (operating_expenses / net_revenue)*100
-        effective_tax_rate_ytd = df.iloc[20, 1]
-        effective_tax_rate_ytd = effective_tax_rate_ytd * 100
+        net_revenue = safe_float(df.iloc[1, 1])
+        operating_expenses = safe_float(df.iloc[8, 1])
+        if net_revenue != 0:
+            operating_expenses_ratio = (operating_expenses / net_revenue) * 100
+            item["operating_expenses_ratio"] = format_digits(operating_expenses_ratio)
+        else:
+            item["operating_expenses_ratio"] = ""
 
-        item["operating_expenses_ratio"] = format_digits(operating_expenses_ratio)
-        item["effective_tax_rate_ytd"] = format_digits(effective_tax_rate_ytd)
+        # effective_tax_rate_ytd 只有 Q2~Q4 才有年度累積數據
+        if self.this_quarter in ["Q2", "Q3", "Q4"]:
+            effective_tax_rate_ytd = safe_float(df.iloc[20, 1]) * 100
+            item["effective_tax_rate_ytd"] = format_digits(effective_tax_rate_ytd)
+        else:
+            item["effective_tax_rate_ytd"] = ""
         return item
     
     def parse_financial_condition(self, df):
         def use_verb_ed_million(val):
             try:
-                num = float(val/1000)
+                num = abs(float(val/1000))
                 num_str = f"{num:,.2f}"
-                return f"increased by NT$ {num_str} million" if num > 0 else f"decreased by NT$ {num_str} million"
+                return f"increased by NT$ {num_str} million" if val > 0 else f"decreased by NT$ {num_str} million"
             except:
                 return ""
             
         def use_noun_million(val):
             try:
-                num = float(val/1000)
+                num = abs(float(val/1000))
                 num_str = f"{num:,.2f}"
-                return f"an increase of NT$ {num_str} million" if num > 0 else f"a decrease of NT$ {num_str} million"
+                return f"an increase of NT$ {num_str} million" if val > 0 else f"a decrease of NT$ {num_str} million"
             except:
                 return ""
             
@@ -633,7 +688,7 @@ class ManagementReportParser(TranscriptParser):
             key = re.sub(r'（[^）]*）', '', key)  # 刪除中文括號 （）
             
             # 然後處理其他字符替換
-            key = key.strip().lower().replace(" ", "_").replace("\xa0", "").replace("-", "_")
+            key = key.strip().lower().replace(" ", "_").replace("\xa0", "").replace("*", "").replace("-", "_")
             key = key.strip()  # 最後清理前後空格
             
             # Assign Values
@@ -675,7 +730,7 @@ class ManagementReportParser(TranscriptParser):
             key = re.sub(r'（[^）]*）', '', key)  # 刪除中文括號 （）
             
             # 然後處理其他字符替換
-            key = key.strip().lower().replace(" ", "_").replace("\xa0", "").replace("-", "_")
+            key = key.strip().lower().replace(" ", "_").replace("\xa0", "").replace("*", "").replace("-", "_")
             # 去掉結尾的斜線
             key = key.rstrip("/")
             key = key.strip()  # 最後清理前後空格
@@ -691,8 +746,11 @@ class ManagementReportParser(TranscriptParser):
                     if previous_row is not None:
                         net_cash_position_changes = previous_row.iloc[1] / 1000
                         beginning_cash_balance_val = num - net_cash_position_changes
-                        item["beginning_cash_balance"] = f"{beginning_cash_balance_val:,.2f} million"
+                        # 顯示變動為 increase 或 decrease
+                        change_label = "increased from" if net_cash_position_changes > 0 else "decreased from"
+                        item["beginning_cash_balance"] = f"{change_label} NT$ {beginning_cash_balance_val:,.2f} million"
                         item[f"{key}"] = f"{num:,.2f} million"
+
                 elif key in ["other_operating_sources", "net_investing_sources", "net_financing_sources"]:
                     # 判斷是 gain 還是 loss
                     if val >= 0:
@@ -728,21 +786,24 @@ class ManagementReportParser(TranscriptParser):
             if pd.isna(developing_num):
                 item[f"{key}"] = 0
             else:
-                item[f"{key}"] = int(developing_num) if str(developing_num).replace('.', '').isdigit() else str(developing_num)
+                item[f"{key}"] = safe_int(developing_num) if str(developing_num).replace('.', '').isdigit() else str(developing_num)
             return item
         else:
-            item["ememory_total"] = int(df.loc["Total", "ememory"])
-            item["pufsecurity_total"] = int(df.loc["Total", "pufsecurity"]) + int(df.loc["Total", "pufsecurity_us"])
-            item["ememory_jp_total"] = int(df.loc["Total", "ememory_jp"])
+            # 計算 eMemory 總人數：優先使用 ememory_sum 欄，若不存在則加總 ememory + ememory_jp
+            if "ememory_sum" in df.columns:
+                total_series = df.loc["Total", "ememory_sum"]
+                mask = df.index.astype(str).str.contains("R", na=False)
+                rd = df.loc[mask, "ememory_sum"].sum()
+            else:
+                ememory_cols = [c for c in df.columns if c.startswith("ememory")]
+                total_series = df.loc["Total", ememory_cols].fillna(0).sum()
+                mask = df.index.astype(str).str.contains("R", na=False)
+                rd = df.loc[mask, ememory_cols].fillna(0).sum().sum()
+            item["total"] = safe_int(total_series)
+            item["rd"] = safe_int(rd)
 
-            mask = df.index.astype(str).str.contains("R", na=False)
-            # 找到 dept 欄位包含 "R" 的行，然後將 ememory 欄位相加
-            ememory_rd = df.loc[mask, "ememory"].sum()
-            pufsecurity_rd = df.loc[mask, "pufsecurity"].sum()
-            pufsecurity_us_rd = df.loc[mask, "pufsecurity_us"].sum()
-
-            item["ememory_rd"] = int(ememory_rd)
-            item["pufsecurity_rd"] = int(pufsecurity_rd) + int(pufsecurity_us_rd)
+            ratio = (rd / item["total"])*100 if item["total"] != 0 else 0
+            item["rd_ratio"] = format_digits(ratio)
             return item
         return None
     
