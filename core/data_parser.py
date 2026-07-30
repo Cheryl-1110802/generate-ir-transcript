@@ -96,6 +96,24 @@ def use_noun(val):
         return f"an increase of {num_str}" if num > 0 else f"a decrease of {num_str}"
     except:
         return ""
+
+# wafer_size 美金句子專用：句子本身沒有 "sequentially"/"year-over-year" 這種文字可以
+# 提供語境，所以用語需要自己說明是季增減還是年增減
+def use_sequential_noun(val):
+    try:
+        num = float(val)
+        num_str = format_digits(num)
+        return f"a sequential increase of {num_str}" if num > 0 else f"a sequential decrease of {num_str}"
+    except:
+        return ""
+
+def use_yoy_noun(val):
+    try:
+        num = float(val)
+        num_str = format_digits(num)
+        return f"a year-over-year increase of {num_str}" if num > 0 else f"a year-over-year decrease of {num_str}"
+    except:
+        return ""
         
 def safe_int(val, default=0):
     """將 Excel 讀取的值安全轉為 int；NaN/None/文字 → default"""
@@ -132,6 +150,23 @@ def use_chinese_updown(key=None, val=None):
             return f"上升 {num_str}" if num > 0 else f"下降 {num_str}"
         else:
             return f"成長 {num_str}" if num > 0 else f"衰退 {num_str}"
+    except:
+        return ""
+
+# 美金（US$）段落專用的季增/季減、年增/年減用語
+def use_chinese_quarterly(val):
+    try:
+        num = float(val)
+        num_str = format_digits(num)
+        return f"季增 {num_str}" if num > 0 else f"季減 {num_str}"
+    except:
+        return ""
+
+def use_chinese_yearly(val):
+    try:
+        num = float(val)
+        num_str = format_digits(num)
+        return f"年增 {num_str}" if num > 0 else f"年減 {num_str}"
     except:
         return ""
 
@@ -248,14 +283,23 @@ class TranscriptParser:
             row_index = str(row_index)
             key = row_index.strip().lower().replace(" ", "_").replace("\xa0", "").replace("*", "")
 
-            # Assign Values
-            if key in ["licensing", "royalty"]:
+            if pd.isna(key) or key == "nan":
+                continue  # 跳過空白列與美金區塊前的重複表頭列
+
+            # 美金（US$）區塊的列名帶有 "_usd" 後綴，例如 "Licensing_USD"
+            # 換算回對應的 NT$ 欄位名稱（licensing/royalty/total），並在輸出欄位加上 "_us" 後綴
+            is_usd = key.endswith("_usd")
+            base_key = key[:-4] if is_usd else key
+            suffix = "_us" if is_usd else ""
+
+            # Assign Values（美金區塊不需要 % of Revenue 數值，只需要 QoQ/YoY 文字）
+            if base_key in ["licensing", "royalty"] and not is_usd:
                 val = safe_float(row.iloc[8])*100
-                item[f"{key}"] = format_digits(val)
+                item[f"{base_key}"] = format_digits(val)
                 # 年度累積（Q2~Q4才有）
                 if self.this_quarter in ["Q2", "Q3", "Q4"]:
                     val_ytd = safe_float(row.iloc[9])*100
-                    item[f"{key}_ytd"] = format_digits(val_ytd)
+                    item[f"{base_key}_ytd"] = format_digits(val_ytd)
 
             # Assign QoQ and YoY
             qoq = row.iloc[2]
@@ -264,37 +308,51 @@ class TranscriptParser:
             qoq_val = safe_float(qoq)*100
             yoy_val = safe_float(yoy)*100
 
-            if self.lang == "en":
-                if key == "licensing":
-                    item[f"{key}_qoq"] = use_updown(qoq_val)
+            if self.lang == "en" and is_usd:
+                # 美金句子沒有 "sequentially"/"year-over-year" 這種文字可以提供語境，
+                # 所以跟 wafer_size 一樣用 use_sequential_noun/use_yoy_noun 自己說明
+                # 季增減/年增減，並保留 QoQ/YoY 正負號連接詞（and/but）
+                item[f"{base_key}_qoq{suffix}"] = use_sequential_noun(qoq_val)
+                connector = get_connector(qoq_val, yoy_val)
+                item[f"{base_key}_yoy{suffix}"] = connector + use_yoy_noun(yoy_val)
+            elif self.lang == "en":
+                if base_key == "licensing":
+                    item[f"{base_key}_qoq"] = use_updown(qoq_val)
                     connector = get_connector(qoq_val, yoy_val)
-                    item[f"{key}_yoy"] = connector + use_updown(yoy_val)
-                elif key == "royalty":
-                    item[f"{key}_qoq"] = use_verb_ing(qoq_val)
+                    item[f"{base_key}_yoy"] = connector + use_updown(yoy_val)
+                elif base_key == "royalty":
+                    item[f"{base_key}_qoq"] = use_verb_ing(qoq_val)
                     connector = get_connector(qoq_val, yoy_val)
-                    item[f"{key}_yoy"] = connector + use_verb_ing(yoy_val)
+                    item[f"{base_key}_yoy"] = connector + use_verb_ing(yoy_val)
                 else:
-                    item[f"{key}_qoq"] = use_verb_ed(qoq_val)
+                    item[f"{base_key}_qoq"] = use_verb_ed(qoq_val)
                     connector = get_connector(qoq_val, yoy_val)
-                    item[f"{key}_yoy"] = connector + use_verb_ed(yoy_val)
+                    item[f"{base_key}_yoy"] = connector + use_verb_ed(yoy_val)
+            elif is_usd:
+                item[f"{base_key}_qoq{suffix}"] = use_chinese_quarterly(qoq_val)
+                item[f"{base_key}_yoy{suffix}"] = use_chinese_yearly(yoy_val)
             else:
-                item[f"{key}_qoq"] = use_chinese_updown(key, qoq_val)
-                item[f"{key}_yoy"] = use_chinese_updown(key, yoy_val)
+                item[f"{base_key}_qoq"] = use_chinese_updown(base_key, qoq_val)
+                item[f"{base_key}_yoy"] = use_chinese_updown(base_key, yoy_val)
 
             # 年度累積（Q2~Q4才有）
             if self.this_quarter in ["Q2", "Q3", "Q4"]:
-                yoy_ytd = row.iloc[7]      
-                yoy_ytd_val = safe_float(yoy_ytd)*100         
-                
-                if self.lang == "en":
-                    if key == "licensing":
-                        item[f"{key}_yoy_ytd"] = use_updown(yoy_ytd_val)
-                    elif key == "royalty":
-                        item[f"{key}_yoy_ytd"] = use_verb_ing(yoy_ytd_val)
+                yoy_ytd = row.iloc[7]
+                yoy_ytd_val = safe_float(yoy_ytd)*100
+
+                if self.lang == "en" and is_usd:
+                    item[f"{base_key}_yoy_ytd{suffix}"] = use_yoy_noun(yoy_ytd_val)
+                elif self.lang == "en":
+                    if base_key == "licensing":
+                        item[f"{base_key}_yoy_ytd"] = use_updown(yoy_ytd_val)
+                    elif base_key == "royalty":
+                        item[f"{base_key}_yoy_ytd"] = use_verb_ing(yoy_ytd_val)
                     else:
-                        item[f"{key}_yoy_ytd"] = use_verb_ed(yoy_ytd_val)
+                        item[f"{base_key}_yoy_ytd"] = use_verb_ed(yoy_ytd_val)
+                elif is_usd:
+                    item[f"{base_key}_yoy_ytd{suffix}"] = use_chinese_yearly(yoy_ytd_val)
                 else:
-                    item[f"{key}_yoy_ytd"] = use_chinese_updown(key, yoy_ytd_val)
+                    item[f"{base_key}_yoy_ytd"] = use_chinese_updown(base_key, yoy_ytd_val)
         return item
 
     def parse_tech(self, df):
@@ -417,10 +475,16 @@ class TranscriptParser:
             if pd.isna(key) or key == "nan":
                 continue  # 跳過這一行
 
+            # 美金（US$）區塊的列名帶有 "_usd" 後綴，例如 "eight_inch_usd"
+            is_usd = key.endswith("_usd")
+            base_key = key[:-4] if is_usd else key
+            suffix = "_us" if is_usd else ""
+
             val = row.iloc[0]
             ratio_val = safe_float(val)*100
 
-            item[f"{key}"] = format_digits(ratio_val)
+            if not is_usd:
+                item[f"{base_key}"] = format_digits(ratio_val)
 
             qoq = row.iloc[1]
             yoy = row.iloc[2]
@@ -428,13 +492,30 @@ class TranscriptParser:
             qoq_val = safe_float(qoq)*100
             yoy_val = safe_float(yoy)*100
 
-            if self.lang == "en":
-                item[f"{key}_qoq"] = use_updown(qoq_val)
+            if self.lang == "en" and is_usd:
+                # 美金句子沒有 "sequentially"/"year-over-year" 這種文字可以提供語境，
+                # 所以用 use_sequential_noun/use_yoy_noun 自己說明季增減/年增減，
+                # 並保留 QoQ/YoY 正負號連接詞（and/but）— 模板需移除原本寫死的 "and"
+                item[f"{base_key}_qoq{suffix}"] = use_sequential_noun(qoq_val)
                 connector = get_connector(qoq_val, yoy_val)
-                item[f"{key}_yoy"] = connector + use_updown(yoy_val)
+                item[f"{base_key}_yoy{suffix}"] = connector + use_yoy_noun(yoy_val)
+            elif self.lang == "en":
+                item[f"{base_key}_qoq"] = use_updown(qoq_val)
+                connector = get_connector(qoq_val, yoy_val)
+                item[f"{base_key}_yoy"] = connector + use_updown(yoy_val)
+            elif is_usd:
+                item[f"{base_key}_qoq{suffix}"] = use_chinese_quarterly(qoq_val)
+                item[f"{base_key}_yoy{suffix}"] = use_chinese_yearly(yoy_val)
             else:
-                item[f"{key}_qoq"] = use_chinese_updown(key, qoq_val)
-                item[f"{key}_yoy"] = use_chinese_updown(key, yoy_val)
+                item[f"{base_key}_qoq"] = use_chinese_updown(base_key, qoq_val)
+                item[f"{base_key}_yoy"] = use_chinese_updown(base_key, yoy_val)
+
+        # 模板中 twelve_inch 的美金句子變數名稱少了 "_qoq"（twelve_inch_us 而非
+        # twelve_inch_qoq_us)，這裡加一個別名，避免因模板打字誤差而漏字；
+        # 建議之後把模板的 {{ wafer_size.twelve_inch_us }} 改成
+        # {{ wafer_size.twelve_inch_qoq_us }} 以與 eight_inch 的命名一致。
+        if "twelve_inch_qoq_us" in item:
+            item["twelve_inch_us"] = item["twelve_inch_qoq_us"]
         return item
 
     def parse_opening_remarks(self, df):
