@@ -67,28 +67,9 @@ def format_date_zh(date_str):
     return f"{dt.year}年{dt.month}月{dt.day}日"
 
 def get_previous_quarter_end_date(this_quarter, this_year):
-    """計算上一季的最後一天日期"""
-    quarter_to_month = {
-        "Q1": 12,  # Q1的上一季是Q4，結束於12月31日
-        "Q2": 3,   # Q2的上一季是Q1，結束於3月31日
-        "Q3": 6,   # Q3的上一季是Q2，結束於6月30日
-        "Q4": 9    # Q4的上一季是Q3，結束於9月30日
-    }
-    # 獲取上一季結束月份
-    end_month = quarter_to_month.get(this_quarter)
-    if not end_month:
-        return None
-    # 如果是Q1，年份要減1（因為上一季是去年的Q4）
-    year = int(this_year) - 1 if this_quarter == "Q1" else int(this_year)
-    
-    # 根據月份確定最後一天
-    if end_month in [3, 12]:  # 3月和12月都是31天
-        last_day = 31
-    elif end_month == 6:      # 6月是30天
-        last_day = 30
-    elif end_month == 9:      # 9月是30天
-        last_day = 30
-    return f"{year}-{end_month:02d}-{last_day:02d}"
+    """Current assets/liabilities 段落固定跟「前一年年底」比較（去年12月31日），
+    而不是逐季比較的上一季末，所以不管 this_quarter 是哪一季都回傳去年12月31日"""
+    return f"{int(this_year) - 1}-12-31"
 
 def create_transcript_context(lang, this_quarter, this_year, event_date):
     # quarter_map 設定
