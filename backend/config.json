@@ -1,0 +1,20 @@
+{
+  "scripts": {
+    "script1": {
+      "name": "自辦法說會講稿更新",
+      "description": "自動更新法說會相關文件和講稿內容",
+      "path": "scripts/document_update/main.py"
+    },
+    "script2": {
+      "name": "法說會次數統計",
+      "description": "統計法說會舉辦次數及資訊單填寫",
+      "path": "scripts/meeting_count/main.py"
+    }
+  },
+  "ir_meetings_base_dir": "C:\\Users\\cherylhuang\\OneDrive - 力旺電子股份有限公司\\Investor Relations\\02_法說會與座談會",
+  "server": {
+    "host": "127.0.0.1",
+    "port": 5001,
+    "debug": true
+  }
+}

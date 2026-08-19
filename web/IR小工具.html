@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>IR小工具</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body { 
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", sans-serif; 
+      margin: 0;
+      padding: 40px;
+      background: linear-gradient(135deg, #F7BE16 0%, #FFA500 50%, #FFD700 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 40px rgba(247, 190, 22, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      width: 160px;
+      height: auto;
+      margin-bottom: 20px;
+    }
+
+    h1 { 
+      margin-bottom: 0.5rem; 
+      color: #2d3748;
+      font-size: 2.5rem;
+      font-weight: 700;
+      text-align: center;
+      background: linear-gradient(135deg, #F7BE16, #FF8C00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .desc { 
+      color: #666; 
+      margin-bottom: 2rem; 
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    /* 新的模組化佈局樣式 */
+    .function-modules {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .module-card {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 10px 25px rgba(247, 190, 22, 0.15);
+      border: 2px solid rgba(247, 190, 22, 0.1);
+      transition: all 0.3s ease;
+      width: 100%;
+      max-width: 100%;
+      min-height: 400px;
+    }
+
+    .module-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 35px rgba(247, 190, 22, 0.2);
+    }
+
+    .module-title {
+      margin: 0 0 20px 0;
+      color: #2d3748;
+      font-size: 1.5rem;
+      font-weight: 700;
+      border-bottom: 3px solid #F7BE16;
+      padding-bottom: 10px;
+    }
+
+    .module-content {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .feature-section {
+      background: rgba(247, 190, 22, 0.05);
+      padding: 20px;
+      border-radius: 10px;
+      border-left: 4px solid #F7BE16;
+      margin-bottom: 15px;
+      min-height: 120px;
+    }
+
+    .feature-section h4 {
+      margin: 0 0 15px 0;
+      color: #2d3748;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .tools-grid { 
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .tool-card { 
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(247, 190, 22, 0.1);
+      border: 1px solid rgba(247, 190, 22, 0.2);
+      transition: all 0.3s ease;
+      min-height: 150px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .tool-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 30px rgba(247, 190, 22, 0.3);
+    }
+
+    .tool-card h3 { 
+      margin-bottom: 10px; 
+      color: #2d3748;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .tool-card .desc { 
+      color: #666;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    button { 
+      padding: 12px 24px; 
+      border-radius: 10px; 
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #F7BE16, #FFA500);
+      color: white;
+      transition: all 0.3s ease;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    button:hover:not(:disabled) { 
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(247, 190, 22, 0.4);
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .output-section {
+      margin-top: 30px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(247, 190, 22, 0.1);
+    }
+
+    .output-header {
+      background: linear-gradient(135deg, #F7BE16, #FFA500);
+      color: white;
+      padding: 15px 20px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .output-content {
+      padding: 20px;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .output-placeholder {
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    pre { 
+      background: #1a1a1a; 
+      color: #e2e8f0; 
+      padding: 20px; 
+      border-radius: 10px; 
+      white-space: pre-wrap; 
+      font-family: 'Courier New', monospace;
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 15px;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+
+    .status.success { 
+      background: rgba(34, 197, 94, 0.1);
+      color: #16a34a;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .status.error { 
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .status.running { 
+      background: rgba(59, 130, 246, 0.1);
+      color: #2563eb;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .status-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+    }
+
+    .status.success .status-icon { background: #16a34a; }
+    .status.error .status-icon { background: #dc2626; }
+    .status.running .status-icon { 
+      background: #2563eb;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .clear-btn {
+      background: #6b7280;
+      font-size: 0.9rem;
+      padding: 8px 16px;
+      width: auto;
+      margin: 0;
+    }
+
+    .clear-btn:hover {
+      background: #4b5563;
+      transform: none;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #4a5568;
+    }
+
+    .form-group input, .form-group select {
+      padding: 10px 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+      width: 100%;
+      max-width: 200px;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: #F7BE16;
+      box-shadow: 0 0 0 3px rgba(247, 190, 22, 0.1);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      align-items: end;
+    }
+
+    .action-btn {
+      background: linear-gradient(135deg, #F7BE16, #FFA500);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      max-width: 200px;
+    }
+
+    .action-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(247, 190, 22, 0.3);
+    }
+
+    /* 查詢結果區域樣式 */
+    .query-output-section {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(247, 190, 22, 0.1);
+      border: 1px solid rgba(247, 190, 22, 0.2);
+    }
+
+    .query-output-header {
+      background: linear-gradient(135deg, #F7BE16, #FFA500);
+      color: white;
+      padding: 12px 15px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .query-output-content {
+      padding: 15px;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .query-output-content pre {
+      background: #f8f9fa;
+      color: #2d3748;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #F7BE16;
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    /* 事件選擇樣式 */
+    .event-item {
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .event-item:hover {
+      border-color: #F7BE16;
+      background: rgba(247, 190, 22, 0.05);
+    }
+
+    .event-item.selected {
+      border-color: #F7BE16;
+      background: rgba(247, 190, 22, 0.1);
+    }
+
+    .event-checkbox {
+      margin-right: 10px;
+    }
+
+    .nav-btn {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      background: #5a6268;
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* 響應式設計 */
+    @media (max-width: 768px) {
+      body { padding: 20px; }
+      .container { padding: 20px; }
+      h1 { font-size: 2rem; }
+      .tools-grid { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  
+    /* ── 步驟式流程 ─────────────────────────────────────────────────────── */
+    .step-container {
+      margin-bottom: 16px;
+      border: 1px solid rgba(247, 190, 22, 0.25);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: rgba(247, 190, 22, 0.07);
+      font-weight: 600;
+      color: #2d3748;
+    }
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #d1d5db;
+      color: white;
+      font-size: 0.85rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .step-badge.done { background: #27ae60; }
+    .step-title { flex: 1; }
+    .step-check { color: #27ae60; font-size: 0.9rem; font-weight: 700; }
+    .step-body {
+      padding: 16px;
+    }
+    .step-hint {
+      color: #666;
+      font-size: 0.9rem;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+  
+    /* ── 講稿文字編輯器 ─────────────────────────────────────────────────── */
+    .speech-tabs { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+    .speech-tab {
+      padding:6px 14px; font-size:13px; border-radius:20px; cursor:pointer;
+      border:0.5px solid rgba(247,190,22,0.4); color:#666; background:transparent;
+    }
+    .speech-tab.active { background:#F7BE16; color:#5a3e00; border-color:#F7BE16; font-weight:500; }
+    .speech-tab.updated { border-color:#27ae60; color:#27ae60; }
+    .speech-tab.updated.active { background:#27ae60; color:#fff; border-color:#27ae60; }
+    .speech-row { margin-bottom:14px; }
+    .speech-row-label {
+      font-size:11px; font-weight:500; color:#888; text-transform:uppercase;
+      letter-spacing:0.04em; margin-bottom:6px;
+    }
+    .speech-langs { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .speech-lang-label { font-size:11px; color:#aaa; margin-bottom:3px; }
+    .speech-textarea {
+      width:100%; min-height:80px; resize:vertical; font-size:13px;
+      line-height:1.6; border:0.5px solid #ddd; border-radius:8px;
+      padding:8px 10px; font-family:inherit; color:#333; background:#fff;
+    }
+    .speech-textarea:focus { outline:none; border-color:#F7BE16; }
+    .speech-save-bar {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-top:6px; padding-top:12px; border-top:0.5px solid #eee;
+    }
+    .speech-hint { font-size:12px; color:#aaa; }
+
+  
+    /* ── 頁籤導覽 ──────────────────────────────────────────────────────── */
+    .page-nav {
+      display: flex;
+      gap: 0;
+      margin-bottom: 28px;
+      border-bottom: 2px solid rgba(247,190,22,0.25);
+    }
+    .page-nav-btn {
+      padding: 10px 28px;
+      font-size: 15px;
+      font-weight: 500;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #999;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.15s;
+    }
+    .page-nav-btn.active {
+      color: #333;
+      border-bottom-color: #F7BE16;
+    }
+    .page-nav-btn:hover:not(.active) { color: #555; }
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <!-- Logo區域 -->
+      <div class="logo-container" style="margin-bottom: 20px;">
+        <img src="logo.svg" alt="Company Logo" class="logo" onerror="this.style.display='none'">
+      </div>
+      <h1>IR小工具</h1>
+      <p class="desc">自動化執行 IR 相關工作流程</p>
+    </div>
+
+    <!-- 頁籤導覽 -->
+    <div class="page-nav">
+      <button class="page-nav-btn" onclick="showPage('activity')" id="nav-activity">法說會活動管理</button>
+      <button class="page-nav-btn active" onclick="showPage('transcript')" id="nav-transcript">自辦法說會</button>
+    </div>
+
+    <!-- 重新組織的功能區塊 -->
+    <div class="function-modules">
+
+      <!-- ══ 頁面一：法說會活動管理 ══ -->
+      <div class="page-section" id="page-activity">
+
+      <!-- 第一個單元：法說會管理 -->
+      <div class="module-card">
+        <h2 class="module-title">📊 法說會管理</h2>
+        <div class="module-content">
+          <!-- 法說會場次查詢 -->
+          <div class="feature-section">
+            <h4>法說會場次查詢</h4>
+            <div class="form-group">
+              <label>查詢期間：</label>
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <input type="date" id="start-date" />
+                <span>至</span>
+                <input type="date" id="end-date" />
+                <button onclick="queryMeetingStats()" class="action-btn">查詢場次</button>
+              </div>
+            </div>
+            
+            <!-- 查詢結果顯示區域 -->
+            <div id="query-results" style="margin-top: 20px; display: none;">
+              <div class="query-output-section">
+                <div class="query-output-header">
+                  查詢結果
+                  <button class="clear-btn" onclick="clearQueryResults()">清除</button>
+                </div>
+                <div class="query-output-content">
+                  <div id="query-status"></div>
+                  <pre id="query-text" style="display: none;"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 公告事項管理 -->
+          <div class="feature-section">
+            <h4>公告事項</h4>
+            <div class="form-group">
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="checkUpcomingDisclosures()" class="action-btn">檢查待公告場次</button>
+                <button onclick="openDisclosureForm()" class="action-btn">產生資訊發佈申請單</button>
+              </div>
+            </div>
+            
+            <!-- 公告檢查結果顯示區域 -->
+            <div id="disclosure-results" style="margin-top: 20px; display: none;">
+              <div class="query-output-section">
+                <div class="query-output-header">
+                  公告檢查結果
+                  <button class="clear-btn" onclick="clearDisclosureResults()">清除</button>
+                </div>
+                <div class="query-output-content">
+                  <div id="disclosure-status"></div>
+                  <pre id="disclosure-text" style="display: none;"></pre>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 申請單填寫表單區域 -->
+            <div id="disclosure-form" style="margin-top: 20px; display: none;">
+              <div class="query-output-section">
+                <div class="query-output-header">
+                  填寫申請單資料
+                  <button class="clear-btn" onclick="closeDisclosureForm()">關閉</button>
+                </div>
+                <div class="query-output-content">
+                  <div id="events-selection" style="margin-bottom: 20px;">
+                    <h5 style="margin: 0 0 10px 0; color: #2d3748;">選擇要公告的場次：</h5>
+                    <div id="events-list"></div>
+                  </div>
+                  
+                  <div id="event-forms" style="display: none;">
+                    <div id="form-navigation" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                      <div style="display: flex; gap: 15px;">
+                        <button onclick="prevEvent()" id="prev-btn" class="nav-btn" disabled>上一個</button>
+                        <button onclick="nextEvent()" id="next-btn" class="nav-btn">下一個</button>
+                      </div>
+                      <div id="form-progress"></div>
+                    </div>
+                    
+                    <div id="current-event-info" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px;"></div>
+                    
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label>會議主辦方：</label>
+                        <input type="text" id="meeting-host" placeholder="請輸入會議主辦方">
+                      </div>
+                      <div class="form-group">
+                        <label>會議名稱：</label>
+                        <input type="text" id="meeting-name" placeholder="請輸入會議名稱">
+                      </div>
+                      <div class="form-group">
+                        <label>會議時間（24時制）：</label>
+                        <input type="text" id="meeting-time" placeholder="例：14:30">
+                      </div>
+                      <div class="form-group">
+                        <label>會議地點：</label>
+                        <input type="text" id="meeting-location" placeholder="請輸入會議地點">
+                      </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; text-align: center;">
+                      <button onclick="submitAllForms()" class="action-btn" id="submit-all-btn">提交所有申請單</button>
+                    </div>
+                  </div>
+                  
+                  <div style="text-align: center; margin-top: 15px;">
+                    <button onclick="proceedToForms()" id="proceed-btn" class="action-btn" style="display: none;">繼續填寫表單</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      </div><!-- /page-activity -->
+
+      <!-- ══ 頁面二：自辦法說會 ══ -->
+      <div class="page-section active" id="page-transcript">
+
+      <!-- 第二個單元：文件更新管理 -->
+      <div class="module-card">
+        <h2 class="module-title">📝 自辦線上法說會</h2>
+        <div class="module-content">
+          <!-- 文件更新設定（步驟式） -->
+          <div class="feature-section">
+            <h4>法說會資料更新</h4>
+
+            <!-- Step 1：季度設定 -->
+            <div class="step-container">
+              <div class="step-header">
+                <span class="step-badge" id="step1-badge">1</span>
+                <span class="step-title">季初設定（每季一次）</span>
+                <span class="step-check" id="step1-check" style="display:none;">✓ 已設定</span>
+              </div>
+              <div class="step-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>季度：</label>
+                    <select id="quarter-select">
+                      <option value="Q1">Q1</option>
+                      <option value="Q2">Q2</option>
+                      <option value="Q3">Q3</option>
+                      <option value="Q4">Q4</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>年度：</label>
+                    <input type="number" id="year-input" min="2020" max="2030" />
+                  </div>
+                  <div class="form-group">
+                    <label>法說會日期：</label>
+                    <input type="date" id="event-date" />
+                  </div>
+                  <div class="form-group">
+                    <button onclick="confirmQuarterConfig()" class="action-btn" id="config-btn">
+                      <span id="config-btn-text">確認季度設定</span>
+                    </button>
+                  </div>
+                </div>
+                <p id="step1-result" style="margin: 10px 0 0; font-size:0.88rem; color:#27ae60; display:none;"></p>
+              </div>
+            </div>
+
+            <!-- Step 2：填資料（說明） -->
+            <div class="step-container">
+              <div class="step-header">
+                <span class="step-badge">2</span>
+                <span class="step-title">填入各部門資料</span>
+              </div>
+              <div class="step-body">
+                <p class="step-hint">將各部門提供的資料填入 <code>data input.xlsx</code> 的對應 sheet。<br>
+                可隨時進行步驟三預覽，尚未填入的 sheet 會在 Word 輸出中以<span style="color:#e00;font-weight:600;"> 紅字 </span>標示。</p>
+                <button onclick="openExcelFile()" class="action-btn" id="open-excel-btn" style="margin-top:10px;">
+                  <span id="open-excel-btn-text">📂 開啟 Excel</span>
+                </button>
+                <p id="excel-path-hint" style="margin:8px 0 0; font-size:0.8rem; color:#999; word-break:break-all;"></p>
+              </div>
+            </div>
+
+            <!-- Step 3：產生文件 -->
+            <div class="step-container">
+              <div class="step-header">
+                <span class="step-badge">3</span>
+                <span class="step-title">產生講稿與 Management Report</span>
+              </div>
+              <div class="step-body">
+                <button onclick="generateDocuments()" class="action-btn" id="generate-btn" disabled>
+                  <span id="generate-btn-text">產生文件</span>
+                </button>
+                <div id="document-results" style="margin-top: 16px; display: none;">
+                  <div class="query-output-section">
+                    <div class="query-output-header">
+                      產生結果
+                      <button class="clear-btn" onclick="clearDocumentResults()">清除</button>
+                    </div>
+                    <div class="query-output-content">
+                      <div id="document-status"></div>
+                      <pre id="document-text" style="display: none;"></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- 第三個單元：講稿文字輸入 -->
+      <div class="module-card">
+        <h2 class="module-title">✏️ 講稿文字輸入</h2>
+        <div class="module-content">
+          <div class="feature-section">
+            <div class="speech-tabs" id="speech-tabs">
+              <button class="speech-tab active" data-sheet="opening_remarks" onclick="switchSpeechTab('opening_remarks')">Opening remarks</button>
+              <button class="speech-tab" data-sheet="future_outlook" onclick="switchSpeechTab('future_outlook')">Future outlook</button>
+              <button class="speech-tab" data-sheet="chairman_remarks" onclick="switchSpeechTab('chairman_remarks')">Chairman remarks</button>
+            </div>
+            <div id="speech-editor-body">
+              <div style="color:#aaa;font-size:13px;padding:20px 0;text-align:center;">載入中...</div>
+            </div>
+            <div class="speech-save-bar">
+              <span class="speech-hint" id="speech-hint">從 Email 複製內容後直接貼入，儲存後自動寫入 Excel</span>
+              <button class="action-btn" id="speech-save-btn" onclick="saveSpeechContent()">
+                <span id="speech-save-text">儲存</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      </div><!-- /page-transcript -->
+
+    </div>
+
+  </div>
+
+  <script>
+    const API = "http://127.0.0.1:5001";
+    let scriptConfig = {};
+
+    // 載入腳本配置
+    async function loadScriptConfig() {
+      try {
+        const response = await fetch(`${API}/scripts`);
+        if (response.ok) {
+          scriptConfig = await response.json();
+          updateToolCards();
+        }
+      } catch (error) {
+        console.warn('無法載入腳本配置:', error.message);
+      }
+    }
+
+    // 更新工具卡片
+    function updateToolCards() {
+      // 法說會管理區塊
+      const meetingToolsGrid = document.getElementById('meeting-tools');
+
+      for (const [scriptId, script] of Object.entries(scriptConfig)) {
+        const isAvailable = script.available;
+        
+        // 只處理法說會次數統計工具
+        if (scriptId === 'script2') { // 法說會次數統計 - 只顯示資訊，不顯示執行按鈕
+          const cardHtml = `
+            <div class="tool-card ${!isAvailable ? 'unavailable' : ''}">
+              <h3>${script.name}</h3>
+              <p class="desc">${script.description}</p>
+              <div style="color: #666; font-size: 0.9rem; text-align: center; padding: 10px;">
+                請使用下方「查詢場次」功能進行統計查詢
+              </div>
+            </div>
+          `;
+          if (meetingToolsGrid) {
+            meetingToolsGrid.innerHTML = cardHtml;
+          }
+        }
+      }
+    }
+
+    // 顯示查詢狀態
+    function showQueryStatus(type, message) {
+      const queryStatus = document.getElementById('query-status');
+      queryStatus.className = `status ${type}`;
+      queryStatus.textContent = message;
+    }
+
+    // 清除查詢結果
+    function clearQueryResults() {
+      document.getElementById('query-results').style.display = 'none';
+      document.getElementById('query-text').style.display = 'none';
+      document.getElementById('query-text').textContent = '';
+      showQueryStatus('', '');
+    }
+
+    // 顯示公告檢查狀態
+    function showDisclosureStatus(type, message) {
+      const disclosureStatus = document.getElementById('disclosure-status');
+      disclosureStatus.className = `status ${type}`;
+      disclosureStatus.textContent = message;
+    }
+
+    // 清除公告檢查結果
+    function clearDisclosureResults() {
+      document.getElementById('disclosure-results').style.display = 'none';
+      document.getElementById('disclosure-text').style.display = 'none';
+      document.getElementById('disclosure-text').textContent = '';
+      showDisclosureStatus('', '');
+    }
+
+    // 顯示文件更新狀態
+    function showDocumentStatus(type, message) {
+      const documentStatus = document.getElementById('document-status');
+      documentStatus.className = `status ${type}`;
+      documentStatus.textContent = message;
+    }
+
+    // 清除文件更新結果
+    function clearDocumentResults() {
+      document.getElementById('document-results').style.display = 'none';
+      document.getElementById('document-text').style.display = 'none';
+      document.getElementById('document-text').textContent = '';
+      showDocumentStatus('', '');
+    }
+
+    // 檢查後端連線狀態
+    async function checkBackendStatus() {
+      try {
+        const response = await fetch(`${API}/health`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ 後端服務連線正常');
+          if (data.ir_meetings_path_exists === false) {
+            console.warn('⚠️ 法說會資料夾路徑不存在:', data.ir_meetings_base_dir);
+          }
+          await loadScriptConfig();
+          await loadExcelPath();
+        }
+      } catch (error) {
+        console.warn('⚠️ 後端服務連線失敗:', error.message);
+        showStatus('error', '後端服務連線失敗，請確認服務是否正在運行');
+      }
+    }
+
+    // 顯示 Excel 檔案路徑（僅供參考，不需互動）
+    async function loadExcelPath() {
+      const hint = document.getElementById('excel-path-hint');
+      try {
+        const res = await fetch(`${API}/excel-path`);
+        const result = await res.json();
+        if (result.ok) {
+          hint.textContent = (result.exists ? '路徑：' : '⚠️ 檔案不存在，路徑：') + result.path;
+        }
+      } catch (e) {
+        // 靜默失敗，不影響其他功能
+      }
+    }
+
+    // Step 2：一鍵開啟 Excel（本機後端直接用預設程式開啟檔案）
+    async function openExcelFile() {
+      const button = document.getElementById('open-excel-btn');
+      const buttonText = document.getElementById('open-excel-btn-text');
+      if (button.disabled) return;
+      button.disabled = true;
+      buttonText.textContent = '開啟中...';
+
+      try {
+        const res = await fetch(`${API}/open-excel`, { method: 'POST' });
+        const result = await res.json();
+        if (!result.ok) {
+          alert('開啟失敗：' + (result.message || '未知錯誤'));
+        }
+      } catch (e) {
+        alert('連線失敗：' + e.message);
+      } finally {
+        button.disabled = false;
+        buttonText.textContent = '📂 開啟 Excel';
+      }
+    }
+
+    // 頁面載入時檢查後端狀態
+    window.addEventListener('load', () => {
+      setTimeout(checkBackendStatus, 1000);
+      // 設定預設日期值
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      document.getElementById('end-date').value = todayStr;
+      
+      // 設定開始日期為今年1月1日，避免時區問題
+      const currentYear = today.getFullYear();
+      const thisYearStartStr = `${currentYear}-01-01`;
+      document.getElementById('start-date').value = thisYearStartStr;
+      
+      // 設定預設年度和季度
+      document.getElementById('year-input').value = today.getFullYear();
+      document.getElementById('event-date').value = todayStr;
+      restoreActivePage();
+      restoreConfigState();
+      initSpeechEditor();
+    });
+
+    // 新增功能函數
+
+    // 查詢會議統計
+    async function queryMeetingStats() {
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+      
+      if (!startDate || !endDate) {
+        showQueryStatus('error', '請選擇查詢日期範圍');
+        return;
+      }
+      
+      if (new Date(startDate) > new Date(endDate)) {
+        showQueryStatus('error', '開始日期不能晚於結束日期');
+        return;
+      }
+
+      try {
+        showQueryStatus('running', '正在查詢會議統計...');
+        const response = await fetch(`${API}/query-stats`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ start_date: startDate, end_date: endDate })
+        });
+
+        const result = await response.json();
+        
+        // 顯示查詢結果區域
+        const queryResults = document.getElementById('query-results');
+        const queryText = document.getElementById('query-text');
+        
+        queryResults.style.display = 'block';
+        queryText.style.display = 'block';
+        
+        if (result.ok) {
+          // Show path diagnostic if 0 results
+          let diagMsg = '';
+          if (result.stats && result.stats['總計'] === 0) {
+            if (!result.path_exists) {
+              diagMsg = `\n\n⚠️ 找不到資料夾路徑，請確認 backend/config.json 的 ir_meetings_base_dir 設定是否正確。`;
+            } else if (result.available_years && result.available_years.length === 0) {
+              diagMsg = `\n\n⚠️ 路徑存在但沒有年份子資料夾（例如 2025/、2026/）。`;
+            } else if (result.available_years) {
+              diagMsg = `\n\n📁 路徑正常，可用年份：${result.available_years.join('、')}。所選日期範圍內無符合的會議資料夾。`;
+            }
+          }
+          showQueryStatus('success', '統計查詢完成');
+          queryText.textContent = result.output + diagMsg;
+        } else {
+          showQueryStatus('error', result.message || '查詢失敗');
+          queryText.textContent = result.output || result.message || '查詢失敗，無詳細資訊';
+        }
+      } catch (error) {
+        showQueryStatus('error', `連線失敗: ${error.message}`);
+        console.error('查詢錯誤:', error);
+      }
+    }
+
+    // ── Step 1：確認季度設定（只拍快照，不產生文件）─────────────────────────
+    async function confirmQuarterConfig() {
+      const quarter = document.getElementById('quarter-select').value;
+      const year = document.getElementById('year-input').value;
+      const eventDate = document.getElementById('event-date').value;
+      const button = document.getElementById('config-btn');
+      const buttonText = document.getElementById('config-btn-text');
+
+      if (!year || !eventDate) {
+        alert('請填寫年度和法說會日期');
+        return;
+      }
+      if (button.disabled) return;
+      button.disabled = true;
+      buttonText.innerHTML = '<span class="loading"></span>設定中...';
+
+      try {
+        const res = await fetch(`${API}/update-config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quarter, year: parseInt(year), event_date: eventDate })
+        });
+        const result = await res.json();
+
+        if (!result.ok) {
+          alert('設定失敗：' + (result.message || '未知錯誤'));
+          return;
+        }
+
+        // 標記 Step 1 完成
+        const label = `${year} ${quarter}（${eventDate}）`;
+        document.getElementById('step1-badge').classList.add('done');
+        document.getElementById('step1-check').style.display = 'inline';
+        const p = document.getElementById('step1-result');
+        p.style.display = 'block';
+        p.textContent = '✓ ' + label + '　' + (result.snapshot_detail || '');
+        document.getElementById('generate-btn').disabled = false;
+
+        // 記住設定（跨頁面重整）
+        localStorage.setItem('ir_config', JSON.stringify({ quarter, year, eventDate, label }));
+
+      } catch (e) {
+        alert('連線失敗：' + e.message);
+      } finally {
+        button.disabled = false;
+        buttonText.textContent = '確認季度設定';
+      }
+    }
+
+    // ── Step 3：產生文件（只跑報告，不動設定）────────────────────────────────
+    async function generateDocuments() {
+      const button = document.getElementById('generate-btn');
+      const buttonText = document.getElementById('generate-btn-text');
+      if (button.disabled) return;
+      button.disabled = true;
+      buttonText.innerHTML = '<span class="loading"></span>產生中...';
+
+      try {
+        showDocumentStatus('running', '正在產生文件...');
+        const res = await fetch(`${API}/run/script1`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await res.json();
+
+        document.getElementById('document-results').style.display = 'block';
+        document.getElementById('document-text').style.display = 'block';
+
+        if (result.ok) {
+          showDocumentStatus('success', '文件產生完成');
+          document.getElementById('document-text').textContent = result.output;
+        } else {
+          showDocumentStatus('error', result.message || '文件產生失敗');
+          document.getElementById('document-text').textContent = result.output || result.message || '';
+        }
+      } catch (e) {
+        showDocumentStatus('error', '連線失敗：' + e.message);
+      } finally {
+        button.disabled = false;
+        buttonText.textContent = '產生文件';
+      }
+    }
+
+    // ── 頁面載入時還原 Step 1 狀態 ───────────────────────────────────────────
+    function restoreConfigState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem('ir_config') || 'null');
+        if (!saved) return;
+        document.getElementById('quarter-select').value = saved.quarter;
+        document.getElementById('year-input').value = saved.year;
+        document.getElementById('event-date').value = saved.eventDate;
+        document.getElementById('step1-badge').classList.add('done');
+        document.getElementById('step1-check').style.display = 'inline';
+        const p = document.getElementById('step1-result');
+        p.style.display = 'block';
+        p.textContent = '✓ ' + saved.label;
+        document.getElementById('generate-btn').disabled = false;
+      } catch(e) {}
+    }
+
+    // 檢查待公告事項
+    async function checkUpcomingDisclosures() {
+      try {
+        showDisclosureStatus('running', '正在檢查待公告事項...');
+        const response = await fetch(`${API}/check-disclosures`, { method: 'POST' });
+        const result = await response.json();
+        
+        // 顯示公告檢查結果區域
+        const disclosureResults = document.getElementById('disclosure-results');
+        const disclosureText = document.getElementById('disclosure-text');
+        
+        disclosureResults.style.display = 'block';
+        disclosureText.style.display = 'block';
+        
+        if (result.ok) {
+          showDisclosureStatus('success', '檢查完成');
+          disclosureText.textContent = result.output;
+        } else {
+          showDisclosureStatus('error', result.message || '檢查失敗');
+          disclosureText.textContent = result.output || result.message || '檢查失敗';
+        }
+      } catch (error) {
+        showDisclosureStatus('error', `連線失敗: ${error.message}`);
+        console.error('檢查錯誤:', error);
+      }
+    }
+
+    // 產生公告申請單 - 原有的簡單版本
+    async function generateDisclosureForms() {
+      try {
+        showDisclosureStatus('running', '正在產生公告申請單...');
+        const response = await fetch(`${API}/generate-forms`, { method: 'POST' });
+        const result = await response.json();
+        
+        // 顯示公告檢查結果區域
+        const disclosureResults = document.getElementById('disclosure-results');
+        const disclosureText = document.getElementById('disclosure-text');
+        
+        disclosureResults.style.display = 'block';
+        disclosureText.style.display = 'block';
+        
+        if (result.ok) {
+          showDisclosureStatus('success', '申請單產生完成');
+          disclosureText.textContent = result.output;
+        } else {
+          showDisclosureStatus('error', result.message || '產生失敗');
+          disclosureText.textContent = result.output || result.message || '產生失敗';
+        }
+      } catch (error) {
+        showDisclosureStatus('error', `連線失敗: ${error.message}`);
+        console.error('產生錯誤:', error);
+      }
+    }
+
+    // 新的申請單填寫功能
+    let upcomingEvents = [];
+    let selectedEvents = [];
+    let currentEventIndex = 0;
+    let eventFormsData = [];
+
+    // 開啟申請單填寫表單
+    async function openDisclosureForm() {
+      try {
+        // 先獲取待公告的場次
+        const response = await fetch(`${API}/get-upcoming-events`, { method: 'POST' });
+        const result = await response.json();
+        
+        if (result.ok && result.events && result.events.length > 0) {
+          upcomingEvents = result.events;
+          displayEventsSelection();
+          document.getElementById('disclosure-form').style.display = 'block';
+        } else {
+          showDisclosureStatus('error', '目前沒有需要公告的論壇');
+          const disclosureResults = document.getElementById('disclosure-results');
+          disclosureResults.style.display = 'block';
+        }
+      } catch (error) {
+        showDisclosureStatus('error', `載入失敗: ${error.message}`);
+        console.error('載入錯誤:', error);
+      }
+    }
+
+    // 顯示事件選擇列表
+    function displayEventsSelection() {
+      const eventsList = document.getElementById('events-list');
+      eventsList.innerHTML = '';
+      
+      upcomingEvents.forEach((event, index) => {
+        const eventDiv = document.createElement('div');
+        eventDiv.className = 'event-item';
+        eventDiv.onclick = () => toggleEventSelection(index);
+        
+        eventDiv.innerHTML = `
+          <input type="checkbox" class="event-checkbox" ${selectedEvents.includes(index) ? 'checked' : ''}>
+          <strong>${event.meeting_name}</strong><br>
+          <small>日期: ${new Date(event.date).toLocaleDateString('zh-TW')} | 
+          類型: ${event.type} | 對象: ${event.institutional}</small>
+        `;
+        
+        if (selectedEvents.includes(index)) {
+          eventDiv.classList.add('selected');
+        }
+        
+        eventsList.appendChild(eventDiv);
+      });
+      
+      // 顯示繼續按鈕
+      document.getElementById('proceed-btn').style.display = selectedEvents.length > 0 ? 'inline-block' : 'none';
+    }
+
+    // 切換事件選擇狀態
+    function toggleEventSelection(index) {
+      const eventIndex = selectedEvents.indexOf(index);
+      if (eventIndex > -1) {
+        selectedEvents.splice(eventIndex, 1);
+      } else {
+        selectedEvents.push(index);
+      }
+      displayEventsSelection();
+    }
+
+    // 進入表單填寫階段
+    function proceedToForms() {
+      if (selectedEvents.length === 0) {
+        alert('請至少選擇一個場次');
+        return;
+      }
+      
+      // 初始化表單資料
+      eventFormsData = selectedEvents.map(index => ({
+        originalEvent: upcomingEvents[index],
+        meeting_host: '',
+        meeting_name: upcomingEvents[index].meeting_name,
+        meeting_time: '',
+        meeting_location: ''
+      }));
+      
+      currentEventIndex = 0;
+      
+      // 隱藏選擇區域，顯示表單區域
+      document.getElementById('events-selection').style.display = 'none';
+      document.getElementById('event-forms').style.display = 'block';
+      // 隱藏繼續填寫表單按鈕
+      document.getElementById('proceed-btn').style.display = 'none';
+      
+      updateFormDisplay();
+    }
+
+    // 更新表單顯示
+    function updateFormDisplay() {
+      const currentData = eventFormsData[currentEventIndex];
+      const currentEvent = currentData.originalEvent;
+      
+      // 更新進度顯示
+      document.getElementById('form-progress').textContent = `${currentEventIndex + 1} / ${eventFormsData.length}`;
+      
+      // 更新事件資訊
+      document.getElementById('current-event-info').innerHTML = `
+        <strong>${currentEvent.meeting_name}</strong><br>
+        <small>日期: ${new Date(currentEvent.date).toLocaleDateString('zh-TW')} | 
+        類型: ${currentEvent.type} | 對象: ${currentEvent.institutional}</small>
+      `;
+      
+      // 更新表單欄位
+      document.getElementById('meeting-host').value = currentData.meeting_host;
+      document.getElementById('meeting-name').value = currentData.meeting_name;
+      document.getElementById('meeting-time').value = currentData.meeting_time;
+      document.getElementById('meeting-location').value = currentData.meeting_location;
+      
+      // 更新導航按鈕
+      document.getElementById('prev-btn').disabled = currentEventIndex === 0;
+      document.getElementById('next-btn').disabled = currentEventIndex === eventFormsData.length - 1;
+    }
+
+    // 儲存當前表單資料
+    function saveCurrentForm() {
+      const currentData = eventFormsData[currentEventIndex];
+      currentData.meeting_host = document.getElementById('meeting-host').value;
+      currentData.meeting_name = document.getElementById('meeting-name').value;
+      currentData.meeting_time = document.getElementById('meeting-time').value;
+      currentData.meeting_location = document.getElementById('meeting-location').value;
+    }
+
+    // 上一個事件
+    function prevEvent() {
+      if (currentEventIndex > 0) {
+        saveCurrentForm();
+        currentEventIndex--;
+        updateFormDisplay();
+      }
+    }
+
+    // 下一個事件
+    function nextEvent() {
+      if (currentEventIndex < eventFormsData.length - 1) {
+        saveCurrentForm();
+        currentEventIndex++;
+        updateFormDisplay();
+      }
+    }
+
+    // 提交所有表單
+    async function submitAllForms() {
+      saveCurrentForm();
+      
+      // 驗證所有表單
+      for (let i = 0; i < eventFormsData.length; i++) {
+        const data = eventFormsData[i];
+        if (!data.meeting_host || !data.meeting_name || !data.meeting_time || !data.meeting_location) {
+          alert(`第 ${i + 1} 個會議的資料不完整，請檢查`);
+          currentEventIndex = i;
+          updateFormDisplay();
+          return;
+        }
+      }
+      
+      try {
+        showDisclosureStatus('running', '正在產生申請單...');
+        
+        const response = await fetch(`${API}/generate-forms-with-data`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ forms_data: eventFormsData })
+        });
+        
+        const result = await response.json();
+        
+        // 關閉表單，顯示結果
+        closeDisclosureForm();
+        const disclosureResults = document.getElementById('disclosure-results');
+        const disclosureText = document.getElementById('disclosure-text');
+        
+        disclosureResults.style.display = 'block';
+        disclosureText.style.display = 'block';
+        
+        if (result.ok) {
+          showDisclosureStatus('success', '申請單產生完成');
+          disclosureText.textContent = result.output;
+        } else {
+          showDisclosureStatus('error', result.message || '產生失敗');
+          disclosureText.textContent = result.output || result.message || '產生失敗';
+        }
+      } catch (error) {
+        showDisclosureStatus('error', `提交失敗: ${error.message}`);
+        console.error('提交錯誤:', error);
+      }
+    }
+
+    // 關閉申請單表單
+    function closeDisclosureForm() {
+      document.getElementById('disclosure-form').style.display = 'none';
+      document.getElementById('events-selection').style.display = 'block';
+      document.getElementById('event-forms').style.display = 'none';
+      
+      // 重置狀態
+      selectedEvents = [];
+      eventFormsData = [];
+      currentEventIndex = 0;
+      
+      // 重置按鈕顯示狀態
+      document.getElementById('proceed-btn').style.display = 'none';
+    }
+  
+    // ── 講稿文字編輯器 ────────────────────────────────────────────────────────
+    let currentSpeechSheet = 'opening_remarks';
+    let speechDirty = false;
+
+    const SPEECH_LABELS = {
+      content: '內容',
+      licensing_outlook: 'Licensing outlook',
+      royalty_outlook: 'Royalty outlook',
+      new_ip_tech: 'New IP / Technology',
+      biz_dev_platform: 'Business development platform',
+    };
+
+    async function switchSpeechTab(sheet) {
+      if (speechDirty) {
+        if (!confirm('有未儲存的內容，確定要切換嗎？')) return;
+      }
+      currentSpeechSheet = sheet;
+      speechDirty = false;
+      document.querySelectorAll('.speech-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.sheet === sheet);
+      });
+      await loadSpeechContent(sheet);
+    }
+
+    async function loadSpeechContent(sheet) {
+      const body = document.getElementById('speech-editor-body');
+      body.innerHTML = '<div style="color:#aaa;font-size:13px;padding:20px 0;text-align:center;">載入中...</div>';
+      try {
+        const res = await fetch(`${API}/get-speech/${sheet}`);
+        const data = await res.json();
+        if (!data.ok) { body.innerHTML = `<p style="color:red">${data.message}</p>`; return; }
+        renderSpeechRows(data.rows, sheet);
+      } catch(e) {
+        body.innerHTML = `<p style="color:red">連線失敗: ${e.message}</p>`;
+      }
+    }
+
+    function renderSpeechRows(rows, sheet) {
+      const body = document.getElementById('speech-editor-body');
+      const hasTitle = rows.some(r => 'title' in r);
+      let html = '';
+      rows.forEach((row, i) => {
+        const label = SPEECH_LABELS[row.key] || row.key;
+        html += `<div class="speech-row">`;
+        if (rows.length > 1) html += `<div class="speech-row-label">${label}</div>`;
+        if (hasTitle) {
+          html += `<div style="margin-bottom:6px"><div class="speech-lang-label">標題</div>
+            <input type="text" style="width:100%;font-size:13px;padding:6px 10px;border:0.5px solid #ddd;border-radius:8px;"
+              id="title_${i}" value="${escHtml(row.title||'')}" oninput="speechDirty=true" placeholder="標題（選填）"></div>`;
+        }
+        html += `<div class="speech-langs">
+          <div><div class="speech-lang-label">中文</div>
+            <textarea class="speech-textarea" id="zh_${i}" oninput="speechDirty=true">${escHtml(row.content_zh||'')}</textarea></div>
+          <div><div class="speech-lang-label">English</div>
+            <textarea class="speech-textarea" id="en_${i}" oninput="speechDirty=true">${escHtml(row.content_en||'')}</textarea></div>
+        </div></div>`;
+      });
+      body.innerHTML = html;
+      body.dataset.rows = JSON.stringify(rows);
+    }
+
+    async function saveSpeechContent() {
+      const btn = document.getElementById('speech-save-btn');
+      const txt = document.getElementById('speech-save-text');
+      const body = document.getElementById('speech-editor-body');
+      const rows = JSON.parse(body.dataset.rows || '[]');
+      const hasTitle = rows.some(r => 'title' in r);
+
+      const payload = rows.map((row, i) => {
+        const entry = { key: row.key,
+          content_zh: document.getElementById(`zh_${i}`).value,
+          content_en: document.getElementById(`en_${i}`).value };
+        if (hasTitle) entry.title = document.getElementById(`title_${i}`).value;
+        return entry;
+      });
+
+      btn.disabled = true;
+      txt.textContent = '儲存中...';
+      try {
+        const res = await fetch(`${API}/save-speech`, {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ sheet_name: currentSpeechSheet, rows: payload })
+        });
+        const result = await res.json();
+        if (result.ok) {
+          speechDirty = false;
+          document.getElementById('speech-hint').textContent = '✓ 已儲存 — ' + new Date().toLocaleTimeString();
+          // Mark tab as updated
+          document.querySelectorAll('.speech-tab').forEach(t => {
+            if (t.dataset.sheet === currentSpeechSheet) t.classList.add('updated');
+          });
+        } else {
+          alert('儲存失敗：' + result.message);
+        }
+      } catch(e) {
+        alert('連線失敗：' + e.message);
+      } finally {
+        btn.disabled = false;
+        txt.textContent = '儲存';
+      }
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Load first tab on startup
+    function initSpeechEditor() {
+      loadSpeechContent(currentSpeechSheet);
+    }
+
+  
+    // ── 頁籤切換 ─────────────────────────────────────────────────────────────
+    function showPage(page) {
+      document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.page-nav-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('page-' + page).classList.add('active');
+      document.getElementById('nav-' + page).classList.add('active');
+      localStorage.setItem('ir_active_page', page);
+      // Load speech editor when switching to transcript page
+      if (page === 'transcript' && typeof initSpeechEditor === 'function') {
+        initSpeechEditor();
+      }
+    }
+
+    function restoreActivePage() {
+      const saved = localStorage.getItem('ir_active_page');
+      if (saved && saved !== 'transcript') showPage(saved);
+    }
+
+  </script>
+</body>
+</html>

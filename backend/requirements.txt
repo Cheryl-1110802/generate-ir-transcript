@@ -1,0 +1,10 @@
+flask
+flask-cors
+pandas
+tkcalendar
+jinja2
+docxtpl
+num2words
+openpyxl
+python-docx
+cn2an
