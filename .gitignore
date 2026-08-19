@@ -89,3 +89,8 @@ output/*.json
 # Input files that might be temporary
 input/*.tmp
 input/*.temp
+
+# Real financial / earnings data - never version-controlled
+input/*.xlsx
+input/*.xls
+output/*history*.json
