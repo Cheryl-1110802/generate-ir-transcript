@@ -8,3 +8,4 @@ num2words
 openpyxl
 python-docx
 cn2an
+waitress

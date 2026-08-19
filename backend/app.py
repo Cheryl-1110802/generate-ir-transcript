@@ -91,6 +91,25 @@ def get_excel_path():
     return ok(path=str(excel_path), exists=excel_path.exists())
 
 
+@app.post("/upload-excel")
+def upload_excel():
+    """接收上傳的 Excel 檔案並存到 input/data input.xlsx（給 n8n 之類的外部呼叫者用，
+    取代直接在伺服器上用檔案總管放檔案）"""
+    if "file" not in request.files:
+        return err("沒有收到檔案（form-data 欄位需命名為 'file'）")
+
+    upload = request.files["file"]
+    if not upload.filename:
+        return err("檔案名稱是空的")
+    if not upload.filename.lower().endswith((".xlsx", ".xls")):
+        return err("檔案格式錯誤，只接受 .xlsx / .xls")
+
+    excel_path = DOCUMENT_UPDATE_DIR / "input" / "data input.xlsx"
+    excel_path.parent.mkdir(parents=True, exist_ok=True)
+    upload.save(str(excel_path))
+    return ok(message="Excel 已上傳", path=str(excel_path))
+
+
 @app.post("/open-excel")
 def open_excel():
     excel_path = DOCUMENT_UPDATE_DIR / "input" / "data input.xlsx"
