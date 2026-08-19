@@ -13,8 +13,8 @@
   },
   "ir_meetings_base_dir": "C:\\Users\\cherylhuang\\OneDrive - 力旺電子股份有限公司\\Investor Relations\\02_法說會與座談會",
   "server": {
-    "host": "127.0.0.1",
+    "host": "0.0.0.0",
     "port": 5001,
-    "debug": true
+    "debug": false
   }
 }
