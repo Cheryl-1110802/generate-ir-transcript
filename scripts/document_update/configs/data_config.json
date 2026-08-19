@@ -1,0 +1,23 @@
+{
+  "sheet_mapping": {
+    "opening_remarks": "opening_remarks",
+    "financial_results": "financial_results",
+    "revenue_streams": "revenue_streams",
+    "tech": "tech",
+    "wafer_size": "wafer_size",
+    "new_tapeouts": "new_tapeouts",
+    "future_outlook": "future_outlook",
+    "chairman_remarks": "chairman_remarks",
+    "new_tech_licenses": "new_tech_licenses",
+    "new_tech_platform": "new_tech_platform",
+    "operating_results": "operating_results",
+    "financial_condition": "financial_condition",
+    "annual_cash_flow": "annual_cash_flow",
+    "employees": "employees"
+  },
+  "template_paths": {
+    "transcript_en": "templates/transcript_en_template.docx",
+    "transcript_zh": "templates/transcript_zh_template.docx",
+    "management_report": "templates/management_report_template.docx"
+  }
+}
