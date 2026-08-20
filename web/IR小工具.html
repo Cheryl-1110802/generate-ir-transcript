@@ -524,8 +524,10 @@
       margin-bottom:12px;
     }
     .shared-note button { width:auto; padding:6px 16px; font-size:13px; margin-top:8px; }
-    .sheet-list { margin:0; padding-left:20px; font-size:14px; color:#555; }
+    .sheet-list { margin:0 0 14px; padding-left:20px; font-size:14px; color:#555; }
     .sheet-list li { margin:4px 0; }
+    .data-import button { width:auto; padding:8px 18px; font-size:13.5px; }
+    .data-import-status { margin:8px 0 0; font-size:0.85rem; color:#999; word-break:break-all; }
 
     /* ── 頁籤導覽 ──────────────────────────────────────────────────────── */
     .page-nav {
@@ -560,79 +562,45 @@
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <!-- Logo區域 -->
-      <div class="logo-container" style="margin-bottom: 20px;">
-        <img src="logo.svg" alt="Company Logo" class="logo" onerror="this.style.display='none'">
-      </div>
-      <h1>IR小工具</h1>
-      <p class="desc">自動化執行 IR 相關工作流程</p>
-    </div>
 
     <!-- 重新組織的功能區塊 -->
     <div class="function-modules">
 
       <div class="page-section active" id="page-transcript">
 
-      <!-- 共用設定：兩份文件都會用到 -->
-      <div class="module-card">
-        <h2 class="module-title">⚙️ 共用設定（兩份文件都適用）</h2>
-        <div class="module-content">
-          <div class="feature-section">
-            <h4>法說會資料更新</h4>
-
-            <!-- Step 1：季度設定 -->
-            <div class="step-container">
-              <div class="step-header">
-                <span class="step-badge" id="step1-badge">1</span>
-                <span class="step-title">季初設定（每季一次）</span>
-                <span class="step-check" id="step1-check" style="display:none;">✓ 已設定</span>
-              </div>
-              <div class="step-body">
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label>季度：</label>
-                    <select id="quarter-select">
-                      <option value="Q1">Q1</option>
-                      <option value="Q2">Q2</option>
-                      <option value="Q3">Q3</option>
-                      <option value="Q4">Q4</option>
-                    </select>
-                  </div>
-                  <div class="form-group">
-                    <label>年度：</label>
-                    <input type="number" id="year-input" min="2020" max="2030" />
-                  </div>
-                  <div class="form-group">
-                    <label>法說會日期：</label>
-                    <input type="date" id="event-date" />
-                  </div>
-                  <div class="form-group">
-                    <button onclick="confirmQuarterConfig()" class="action-btn" id="config-btn">
-                      <span id="config-btn-text">確認季度設定</span>
-                    </button>
-                  </div>
-                </div>
-                <p id="step1-result" style="margin: 10px 0 0; font-size:0.88rem; color:#27ae60; display:none;"></p>
-              </div>
+      <!-- 季度設定：兩份文件都會用到，不用額外卡片包裝 -->
+      <div class="step-container" style="margin-bottom:24px;">
+        <div class="step-header">
+          <span class="step-badge" id="step1-badge">1</span>
+          <span class="step-title">季初設定（每季一次）</span>
+          <span class="step-check" id="step1-check" style="display:none;">✓ 已設定</span>
+        </div>
+        <div class="step-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>季度：</label>
+              <select id="quarter-select">
+                <option value="Q1">Q1</option>
+                <option value="Q2">Q2</option>
+                <option value="Q3">Q3</option>
+                <option value="Q4">Q4</option>
+              </select>
             </div>
-
-            <!-- Step 2：填資料（說明） -->
-            <div class="step-container">
-              <div class="step-header">
-                <span class="step-badge">2</span>
-                <span class="step-title">填入各部門資料</span>
-              </div>
-              <div class="step-body">
-                <p class="step-hint">將各部門提供的資料填入 <code>data input.xlsx</code> 的對應 sheet。<br>
-                可隨時到下方頁籤產生文件預覽，尚未填入的 sheet 會在 Word 輸出中以<span style="color:#e00;font-weight:600;"> 紅字 </span>標示。</p>
-                <button onclick="openExcelFile()" class="action-btn" id="open-excel-btn" style="margin-top:10px;">
-                  <span id="open-excel-btn-text">📂 開啟 Excel</span>
-                </button>
-                <p id="excel-path-hint" style="margin:8px 0 0; font-size:0.8rem; color:#999; word-break:break-all;"></p>
-              </div>
+            <div class="form-group">
+              <label>年度：</label>
+              <input type="number" id="year-input" min="2020" max="2030" />
+            </div>
+            <div class="form-group">
+              <label>法說會日期：</label>
+              <input type="date" id="event-date" />
+            </div>
+            <div class="form-group">
+              <button onclick="confirmQuarterConfig()" class="action-btn" id="config-btn">
+                <span id="config-btn-text">確認季度設定</span>
+              </button>
             </div>
           </div>
+          <p id="step1-result" style="margin: 10px 0 0; font-size:0.88rem; color:#27ae60; display:none;"></p>
         </div>
       </div>
 
@@ -656,6 +624,12 @@
                 <li>Revenue by Technology — <code>tech</code></li>
                 <li>Royalty Revenue by Wafer Size — <code>wafer_size</code></li>
               </ul>
+              <div class="data-import">
+                <input type="file" id="upload-transcript-data" accept=".xlsx,.xls" style="display:none"
+                  onchange="uploadExcelFile(this, 'upload-transcript-data-status')">
+                <button class="action-btn" onclick="document.getElementById('upload-transcript-data').click()">📤 上傳 Excel 更新資料</button>
+                <p id="upload-transcript-data-status" class="data-import-status"></p>
+              </div>
             </div>
 
             <div class="feature-section">
@@ -712,6 +686,12 @@
                 <li>Development of Key Technologies — <code>new_tech_licenses</code>、<code>new_tech_platform</code></li>
                 <li>Financial Review（Expenses, Non-operating Items, Net Income &amp; EPS, Assets and Liabilities, Cash Flows, Employee）— <code>operating_results</code>、<code>financial_condition</code>、<code>annual_cash_flow</code>、<code>employees</code></li>
               </ul>
+              <div class="data-import">
+                <input type="file" id="upload-mgmt-data" accept=".xlsx,.xls" style="display:none"
+                  onchange="uploadExcelFile(this, 'upload-mgmt-data-status')">
+                <button class="action-btn" onclick="document.getElementById('upload-mgmt-data').click()">📤 上傳 Excel 更新資料</button>
+                <p id="upload-mgmt-data-status" class="data-import-status"></p>
+              </div>
             </div>
 
             <div class="feature-section">
@@ -725,13 +705,18 @@
 
             <div class="feature-section">
               <h4>③ 表格</h4>
-              <p class="step-hint">以下段落是直接把 Excel 表格範圍貼進 Word（不是轉述成文字），沒有網頁編輯介面，請直接在 Excel 對應分頁填寫（跟法說會 Transcript「資料轉述段落」共用同一份資料）：</p>
+              <p class="step-hint">以下段落是直接把 Excel 表格範圍貼進 Word（不是轉述成文字），資料跟法說會 Transcript「① 資料轉述段落」是同一份，不用在這裡重複上傳：</p>
               <ul class="sheet-list">
                 <li>Financial Results — <code>financial_results</code></li>
                 <li>Revenue across Different Streams — <code>revenue_streams</code></li>
                 <li>Revenue by Technology — <code>tech</code></li>
                 <li>Royalty Revenue by Wafer Size — <code>wafer_size</code></li>
               </ul>
+              <div class="shared-note">
+                資料上傳請至法說會 Transcript 頁籤的「① 資料轉述段落」。
+                <br>
+                <button onclick="showDocTab('transcript')">前往法說會 Transcript 頁籤 →</button>
+              </div>
             </div>
 
             <div class="feature-section">
@@ -800,46 +785,39 @@
         const response = await fetch(`${API}/health`);
         if (response.ok) {
           console.log('✅ 後端服務連線正常');
-          await loadExcelPath();
         }
       } catch (error) {
         console.warn('⚠️ 後端服務連線失敗，請確認服務是否正在運行:', error.message);
       }
     }
 
-    // 顯示 Excel 檔案路徑（僅供參考，不需互動）
-    async function loadExcelPath() {
-      const hint = document.getElementById('excel-path-hint');
+    // 上傳 Excel 更新整份資料（每個「資料轉述段落」／「表格」section 共用同一支 API，
+    // 因為不管從哪個 section 上傳，換掉的都是同一份 data input.xlsx）
+    async function uploadExcelFile(input, statusId) {
+      const file = input.files[0];
+      if (!file) return;
+      const statusEl = document.getElementById(statusId);
+      statusEl.style.color = '#999';
+      statusEl.textContent = '上傳中...';
+
+      const formData = new FormData();
+      formData.append('file', file);
+
       try {
-        const res = await fetch(`${API}/excel-path`);
+        const res = await fetch(`${API}/upload-excel`, { method: 'POST', body: formData });
         const result = await res.json();
         if (result.ok) {
-          hint.textContent = (result.exists ? '路徑：' : '⚠️ 檔案不存在，路徑：') + result.path;
+          statusEl.style.color = '#27ae60';
+          statusEl.textContent = `✓ 已上傳：${file.name}（${new Date().toLocaleTimeString()}）`;
+        } else {
+          statusEl.style.color = '#e00';
+          statusEl.textContent = '上傳失敗：' + (result.message || '未知錯誤');
         }
       } catch (e) {
-        // 靜默失敗，不影響其他功能
-      }
-    }
-
-    // Step 2：一鍵開啟 Excel（本機後端直接用預設程式開啟檔案）
-    async function openExcelFile() {
-      const button = document.getElementById('open-excel-btn');
-      const buttonText = document.getElementById('open-excel-btn-text');
-      if (button.disabled) return;
-      button.disabled = true;
-      buttonText.textContent = '開啟中...';
-
-      try {
-        const res = await fetch(`${API}/open-excel`, { method: 'POST' });
-        const result = await res.json();
-        if (!result.ok) {
-          alert('開啟失敗：' + (result.message || '未知錯誤'));
-        }
-      } catch (e) {
-        alert('連線失敗：' + e.message);
+        statusEl.style.color = '#e00';
+        statusEl.textContent = '連線失敗：' + e.message;
       } finally {
-        button.disabled = false;
-        buttonText.textContent = '📂 開啟 Excel';
+        input.value = '';
       }
     }
 
