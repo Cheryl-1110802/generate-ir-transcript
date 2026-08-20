@@ -68,13 +68,17 @@ def run_script(name: str):
         if not os.path.exists(excel_path):
             return err(f"Excel 檔案不存在: {excel_path}", 404)
 
+        VALID_REPORTS = {"transcript_en", "transcript_zh", "management_report"}
+        data = request.get_json(silent=True) or {}
+        selected_reports = data.get("selected_reports") or list(VALID_REPORTS)
+        invalid = set(selected_reports) - VALID_REPORTS
+        if invalid:
+            return err(f"不支援的報告類型: {sorted(invalid)}")
+
         prev_dir = os.getcwd()
         try:
             os.chdir(str(DOCUMENT_UPDATE_DIR))
-            _run_document_update(
-                excel_path,
-                ["transcript_en", "transcript_zh", "management_report"],
-            )
+            _run_document_update(excel_path, selected_reports)
             return ok(output="文件更新處理完成！")
         except Exception as e:
             return err(f"執行錯誤: {e}", 500)

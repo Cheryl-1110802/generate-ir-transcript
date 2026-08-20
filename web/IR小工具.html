@@ -488,7 +488,7 @@
     /* ── 講稿文字編輯器 ─────────────────────────────────────────────────── */
     .speech-tabs { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
     .speech-tab {
-      padding:6px 14px; font-size:13px; border-radius:20px; cursor:pointer;
+      width:auto; padding:6px 14px; font-size:13px; border-radius:20px; cursor:pointer;
       border:0.5px solid rgba(247,190,22,0.4); color:#666; background:transparent;
     }
     .speech-tab.active { background:#F7BE16; color:#5a3e00; border-color:#F7BE16; font-weight:500; }
@@ -513,7 +513,20 @@
     }
     .speech-hint { font-size:12px; color:#aaa; }
 
-  
+    .shared-badge {
+      display:inline-block; font-size:10px; font-weight:600; color:#b8860b;
+      background:rgba(247,190,22,0.18); border-radius:10px; padding:2px 8px;
+      margin-left:6px; vertical-align:middle;
+    }
+    .shared-note {
+      font-size:13px; color:#666; background:rgba(247,190,22,0.08);
+      border-left:4px solid #F7BE16; border-radius:8px; padding:12px 14px;
+      margin-bottom:12px;
+    }
+    .shared-note button { width:auto; padding:6px 16px; font-size:13px; margin-top:8px; }
+    .sheet-list { margin:0; padding-left:20px; font-size:14px; color:#555; }
+    .sheet-list li { margin:4px 0; }
+
     /* ── 頁籤導覽 ──────────────────────────────────────────────────────── */
     .page-nav {
       display: flex;
@@ -540,6 +553,8 @@
     .page-nav-btn:hover:not(.active) { color: #555; }
     .page-section { display: none; }
     .page-section.active { display: block; }
+    .doc-section { display: none; }
+    .doc-section.active { display: block; }
 
   </style>
 </head>
@@ -559,11 +574,10 @@
 
       <div class="page-section active" id="page-transcript">
 
-      <!-- 第二個單元：文件更新管理 -->
+      <!-- 共用設定：兩份文件都會用到 -->
       <div class="module-card">
-        <h2 class="module-title">📝 自辦線上法說會</h2>
+        <h2 class="module-title">⚙️ 共用設定（兩份文件都適用）</h2>
         <div class="module-content">
-          <!-- 文件更新設定（步驟式） -->
           <div class="feature-section">
             <h4>法說會資料更新</h4>
 
@@ -611,65 +625,118 @@
               </div>
               <div class="step-body">
                 <p class="step-hint">將各部門提供的資料填入 <code>data input.xlsx</code> 的對應 sheet。<br>
-                可隨時進行步驟三預覽，尚未填入的 sheet 會在 Word 輸出中以<span style="color:#e00;font-weight:600;"> 紅字 </span>標示。</p>
+                可隨時到下方頁籤產生文件預覽，尚未填入的 sheet 會在 Word 輸出中以<span style="color:#e00;font-weight:600;"> 紅字 </span>標示。</p>
                 <button onclick="openExcelFile()" class="action-btn" id="open-excel-btn" style="margin-top:10px;">
                   <span id="open-excel-btn-text">📂 開啟 Excel</span>
                 </button>
                 <p id="excel-path-hint" style="margin:8px 0 0; font-size:0.8rem; color:#999; word-break:break-all;"></p>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <!-- Step 3：產生文件 -->
-            <div class="step-container">
-              <div class="step-header">
-                <span class="step-badge">3</span>
-                <span class="step-title">產生講稿與 Management Report</span>
+      <!-- 文件頁籤：法說會 Transcript / Management Report -->
+      <div class="page-nav">
+        <button class="page-nav-btn active" onclick="showDocTab('transcript')" id="doctab-transcript">📝 法說會 Transcript</button>
+        <button class="page-nav-btn" onclick="showDocTab('mgmt')" id="doctab-mgmt">📊 Management Report</button>
+      </div>
+
+      <!-- ══ 法說會 Transcript ══ -->
+      <div class="doc-section active" id="doc-transcript">
+        <div class="module-card">
+          <h2 class="module-title">📝 法說會 Transcript 講稿</h2>
+          <div class="module-content">
+            <div class="feature-section">
+              <h4>講稿段落</h4>
+              <div class="speech-tabs" id="speech-tabs">
+                <button class="speech-tab active" data-sheet="opening_remarks" onclick="switchSpeechTab('opening_remarks')">Opening remarks</button>
+                <button class="speech-tab" data-sheet="chairman_remarks" onclick="switchSpeechTab('chairman_remarks')">Chairman remarks</button>
+                <button class="speech-tab" data-sheet="future_outlook" onclick="switchSpeechTab('future_outlook')">Future outlook<span class="shared-badge">同時用於 Mgmt Report</span></button>
               </div>
-              <div class="step-body">
-                <button onclick="generateDocuments()" class="action-btn" id="generate-btn" disabled>
-                  <span id="generate-btn-text">產生文件</span>
+              <div id="speech-editor-body">
+                <div style="color:#aaa;font-size:13px;padding:20px 0;text-align:center;">載入中...</div>
+              </div>
+              <div class="speech-save-bar">
+                <span class="speech-hint" id="speech-hint">從 Email 複製內容後直接貼入，儲存後自動寫入 Excel</span>
+                <button class="action-btn" id="speech-save-btn" onclick="saveSpeechContent()">
+                  <span id="speech-save-text">儲存</span>
                 </button>
-                <div id="document-results" style="margin-top: 16px; display: none;">
-                  <div class="query-output-section">
-                    <div class="query-output-header">
-                      產生結果
-                      <button class="clear-btn" onclick="clearDocumentResults()">清除</button>
-                    </div>
-                    <div class="query-output-content">
-                      <div id="document-status"></div>
-                      <pre id="document-text" style="display: none;"></pre>
-                    </div>
+              </div>
+            </div>
+
+            <div class="feature-section">
+              <h4>產生文件</h4>
+              <button onclick="generateDocuments(['transcript_en','transcript_zh'], 'transcript')" class="action-btn generate-btn" id="generate-btn-transcript" disabled>
+                <span id="generate-btn-transcript-text">產生 Transcript（中／英文）</span>
+              </button>
+              <div id="document-results-transcript" style="margin-top: 16px; display: none;">
+                <div class="query-output-section">
+                  <div class="query-output-header">
+                    產生結果
+                    <button class="clear-btn" onclick="clearDocumentResults('transcript')">清除</button>
+                  </div>
+                  <div class="query-output-content">
+                    <div id="document-status-transcript"></div>
+                    <pre id="document-text-transcript" style="display: none;"></pre>
                   </div>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
-      </div>
+      </div><!-- /doc-transcript -->
 
-      <!-- 第三個單元：講稿文字輸入 -->
-      <div class="module-card">
-        <h2 class="module-title">✏️ 講稿文字輸入</h2>
-        <div class="module-content">
-          <div class="feature-section">
-            <div class="speech-tabs" id="speech-tabs">
-              <button class="speech-tab active" data-sheet="opening_remarks" onclick="switchSpeechTab('opening_remarks')">Opening remarks</button>
-              <button class="speech-tab" data-sheet="future_outlook" onclick="switchSpeechTab('future_outlook')">Future outlook</button>
-              <button class="speech-tab" data-sheet="chairman_remarks" onclick="switchSpeechTab('chairman_remarks')">Chairman remarks</button>
+      <!-- ══ Management Report ══ -->
+      <div class="doc-section" id="doc-mgmt">
+        <div class="module-card">
+          <h2 class="module-title">📊 Management Report</h2>
+          <div class="module-content">
+            <div class="feature-section">
+              <h4>共用段落</h4>
+              <div class="shared-note">
+                Future Outlook 段落跟法說會 Transcript 是同一份資料，編輯其中一邊、Excel 裡就會同步更新。
+                <br>
+                <button onclick="jumpToFutureOutlook()">前往編輯 Future Outlook →</button>
+              </div>
             </div>
-            <div id="speech-editor-body">
-              <div style="color:#aaa;font-size:13px;padding:20px 0;text-align:center;">載入中...</div>
+
+            <div class="feature-section">
+              <h4>其餘資料表（於 Excel 編輯）</h4>
+              <p class="step-hint">以下分頁目前沒有網頁編輯介面，請直接在 Excel 裡填寫對應分頁：</p>
+              <ul class="sheet-list">
+                <li><code>new_tapeouts</code>（與 Transcript 共用同一份資料，但算法不同）</li>
+                <li><code>operating_results</code></li>
+                <li><code>financial_condition</code></li>
+                <li><code>annual_cash_flow</code></li>
+                <li><code>new_tech_licenses</code></li>
+                <li><code>new_tech_platform</code></li>
+                <li><code>employees</code></li>
+              </ul>
+              <button onclick="openExcelFile()" class="action-btn" style="margin-top:10px;">📂 開啟 Excel</button>
             </div>
-            <div class="speech-save-bar">
-              <span class="speech-hint" id="speech-hint">從 Email 複製內容後直接貼入，儲存後自動寫入 Excel</span>
-              <button class="action-btn" id="speech-save-btn" onclick="saveSpeechContent()">
-                <span id="speech-save-text">儲存</span>
+
+            <div class="feature-section">
+              <h4>產生文件</h4>
+              <button onclick="generateDocuments(['management_report'], 'mgmt')" class="action-btn generate-btn" id="generate-btn-mgmt" disabled>
+                <span id="generate-btn-mgmt-text">產生 Management Report</span>
               </button>
+              <div id="document-results-mgmt" style="margin-top: 16px; display: none;">
+                <div class="query-output-section">
+                  <div class="query-output-header">
+                    產生結果
+                    <button class="clear-btn" onclick="clearDocumentResults('mgmt')">清除</button>
+                  </div>
+                  <div class="query-output-content">
+                    <div id="document-status-mgmt"></div>
+                    <pre id="document-text-mgmt" style="display: none;"></pre>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </div><!-- /doc-mgmt -->
 
       </div><!-- /page-transcript -->
 
@@ -681,18 +748,32 @@
     const API = "http://127.0.0.1:5001";
 
     // 顯示文件更新狀態
-    function showDocumentStatus(type, message) {
-      const documentStatus = document.getElementById('document-status');
+    function showDocumentStatus(suffix, type, message) {
+      const documentStatus = document.getElementById(`document-status-${suffix}`);
       documentStatus.className = `status ${type}`;
       documentStatus.textContent = message;
     }
 
     // 清除文件更新結果
-    function clearDocumentResults() {
-      document.getElementById('document-results').style.display = 'none';
-      document.getElementById('document-text').style.display = 'none';
-      document.getElementById('document-text').textContent = '';
-      showDocumentStatus('', '');
+    function clearDocumentResults(suffix) {
+      document.getElementById(`document-results-${suffix}`).style.display = 'none';
+      document.getElementById(`document-text-${suffix}`).style.display = 'none';
+      document.getElementById(`document-text-${suffix}`).textContent = '';
+      showDocumentStatus(suffix, '', '');
+    }
+
+    // 文件頁籤（法說會 Transcript / Management Report）切換
+    function showDocTab(tab) {
+      document.querySelectorAll('.doc-section').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.page-nav-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('doc-' + tab).classList.add('active');
+      document.getElementById('doctab-' + tab).classList.add('active');
+    }
+
+    // Future Outlook 是共用段落，從 Management Report 頁籤一鍵跳去 Transcript 頁籤編輯
+    function jumpToFutureOutlook() {
+      showDocTab('transcript');
+      switchSpeechTab('future_outlook');
     }
 
     // 檢查後端連線狀態
@@ -794,7 +875,8 @@
         const p = document.getElementById('step1-result');
         p.style.display = 'block';
         p.textContent = '✓ ' + label + '　' + (result.snapshot_detail || '');
-        document.getElementById('generate-btn').disabled = false;
+        document.getElementById('generate-btn-transcript').disabled = false;
+        document.getElementById('generate-btn-mgmt').disabled = false;
 
         // 記住設定（跨頁面重整）
         localStorage.setItem('ir_config', JSON.stringify({ quarter, year, eventDate, label }));
@@ -807,37 +889,44 @@
       }
     }
 
-    // ── Step 3：產生文件（只跑報告，不動設定）────────────────────────────────
-    async function generateDocuments() {
-      const button = document.getElementById('generate-btn');
-      const buttonText = document.getElementById('generate-btn-text');
+    // ── 產生文件（只跑報告，不動設定）── reportTypes: 要產生的報告類型陣列
+    // suffix: 'transcript' 或 'mgmt'，對應各自的按鈕／結果顯示區塊
+    const GENERATE_BTN_LABELS = {
+      transcript: '產生 Transcript（中／英文）',
+      mgmt: '產生 Management Report',
+    };
+
+    async function generateDocuments(reportTypes, suffix) {
+      const button = document.getElementById(`generate-btn-${suffix}`);
+      const buttonText = document.getElementById(`generate-btn-${suffix}-text`);
       if (button.disabled) return;
       button.disabled = true;
       buttonText.innerHTML = '<span class="loading"></span>產生中...';
 
       try {
-        showDocumentStatus('running', '正在產生文件...');
+        showDocumentStatus(suffix, 'running', '正在產生文件...');
         const res = await fetch(`${API}/run/script1`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ selected_reports: reportTypes })
         });
         const result = await res.json();
 
-        document.getElementById('document-results').style.display = 'block';
-        document.getElementById('document-text').style.display = 'block';
+        document.getElementById(`document-results-${suffix}`).style.display = 'block';
+        document.getElementById(`document-text-${suffix}`).style.display = 'block';
 
         if (result.ok) {
-          showDocumentStatus('success', '文件產生完成');
-          document.getElementById('document-text').textContent = result.output;
+          showDocumentStatus(suffix, 'success', '文件產生完成');
+          document.getElementById(`document-text-${suffix}`).textContent = result.output;
         } else {
-          showDocumentStatus('error', result.message || '文件產生失敗');
-          document.getElementById('document-text').textContent = result.output || result.message || '';
+          showDocumentStatus(suffix, 'error', result.message || '文件產生失敗');
+          document.getElementById(`document-text-${suffix}`).textContent = result.output || result.message || '';
         }
       } catch (e) {
-        showDocumentStatus('error', '連線失敗：' + e.message);
+        showDocumentStatus(suffix, 'error', '連線失敗：' + e.message);
       } finally {
         button.disabled = false;
-        buttonText.textContent = '產生文件';
+        buttonText.textContent = GENERATE_BTN_LABELS[suffix];
       }
     }
 
@@ -854,7 +943,8 @@
         const p = document.getElementById('step1-result');
         p.style.display = 'block';
         p.textContent = '✓ ' + saved.label;
-        document.getElementById('generate-btn').disabled = false;
+        document.getElementById('generate-btn-transcript').disabled = false;
+        document.getElementById('generate-btn-mgmt').disabled = false;
       } catch(e) {}
     }
 
