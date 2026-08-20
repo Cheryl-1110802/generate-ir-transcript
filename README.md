@@ -49,7 +49,6 @@ python app.py
 ## 已知限制 / 未來方向
 
 - `/open-excel` 用 `os.startfile`，只有在跑程式的機器上有桌面環境時才有意義，部署到伺服器上這個功能不會動
-- `ir_meetings_base_dir`（`backend/config.json`）目前指向特定使用者的 OneDrive 路徑，換機器／換人維護時需要更新成大家都連得到的共用路徑
 - `tools/` 裡有把 Word 範本轉成 HTML + Jinja2 渲染的雛型，是為了未來可能把產生邏輯搬去 n8n 之類的環境做準備，目前尚未接上主流程
 
 ## 相關連結
