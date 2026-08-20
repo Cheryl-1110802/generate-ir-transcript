@@ -648,11 +648,22 @@
           <h2 class="module-title">📝 法說會 Transcript 講稿</h2>
           <div class="module-content">
             <div class="feature-section">
-              <h4>講稿段落</h4>
+              <h4>① 資料轉述段落</h4>
+              <p class="step-hint">以下段落由 Excel 數字自動組成文字，沒有網頁編輯介面，請直接在 Excel 對應分頁填寫（這 4 個分頁同時也是 Management Report「表格」段落要用的原始資料）：</p>
+              <ul class="sheet-list">
+                <li>Financial Results — <code>financial_results</code></li>
+                <li>Revenue across Different Streams — <code>revenue_streams</code></li>
+                <li>Revenue by Technology — <code>tech</code></li>
+                <li>Royalty Revenue by Wafer Size — <code>wafer_size</code></li>
+              </ul>
+            </div>
+
+            <div class="feature-section">
+              <h4>② 純文字貼上段落</h4>
               <div class="speech-tabs" id="speech-tabs">
-                <button class="speech-tab active" data-sheet="opening_remarks" onclick="switchSpeechTab('opening_remarks')">Opening remarks</button>
-                <button class="speech-tab" data-sheet="chairman_remarks" onclick="switchSpeechTab('chairman_remarks')">Chairman remarks</button>
-                <button class="speech-tab" data-sheet="future_outlook" onclick="switchSpeechTab('future_outlook')">Future outlook<span class="shared-badge">同時用於 Mgmt Report</span></button>
+                <button class="speech-tab active" data-sheet="opening_remarks" onclick="switchSpeechTab('opening_remarks')">Opening</button>
+                <button class="speech-tab" data-sheet="chairman_remarks" onclick="switchSpeechTab('chairman_remarks')">Featured Topic</button>
+                <button class="speech-tab" data-sheet="future_outlook" onclick="switchSpeechTab('future_outlook')">Future Outlook<span class="shared-badge">同時用於 Mgmt Report</span></button>
               </div>
               <div id="speech-editor-body">
                 <div style="color:#aaa;font-size:13px;padding:20px 0;text-align:center;">載入中...</div>
@@ -693,7 +704,18 @@
           <h2 class="module-title">📊 Management Report</h2>
           <div class="module-content">
             <div class="feature-section">
-              <h4>共用段落</h4>
+              <h4>① 資料轉述段落</h4>
+              <p class="step-hint">以下段落由 Excel 數字自動組成文字，沒有網頁編輯介面，請直接在 Excel 對應分頁填寫：</p>
+              <ul class="sheet-list">
+                <li>Executive Summary（Financial Results, Future Outlook / License &amp; Royalty）— <code>operating_results</code>、<code>future_outlook</code></li>
+                <li>Key Business Developments — <code>new_tapeouts</code><span class="shared-badge">與 Transcript 共用資料，算法不同</span></li>
+                <li>Development of Key Technologies — <code>new_tech_licenses</code>、<code>new_tech_platform</code></li>
+                <li>Financial Review（Expenses, Non-operating Items, Net Income &amp; EPS, Assets and Liabilities, Cash Flows, Employee）— <code>operating_results</code>、<code>financial_condition</code>、<code>annual_cash_flow</code>、<code>employees</code></li>
+              </ul>
+            </div>
+
+            <div class="feature-section">
+              <h4>② 純文字貼上段落</h4>
               <div class="shared-note">
                 Future Outlook 段落跟法說會 Transcript 是同一份資料，編輯其中一邊、Excel 裡就會同步更新。
                 <br>
@@ -702,18 +724,14 @@
             </div>
 
             <div class="feature-section">
-              <h4>其餘資料表（於 Excel 編輯）</h4>
-              <p class="step-hint">以下分頁目前沒有網頁編輯介面，請直接在 Excel 裡填寫對應分頁：</p>
+              <h4>③ 表格</h4>
+              <p class="step-hint">以下段落是直接把 Excel 表格範圍貼進 Word（不是轉述成文字），沒有網頁編輯介面，請直接在 Excel 對應分頁填寫（跟法說會 Transcript「資料轉述段落」共用同一份資料）：</p>
               <ul class="sheet-list">
-                <li><code>new_tapeouts</code>（與 Transcript 共用同一份資料，但算法不同）</li>
-                <li><code>operating_results</code></li>
-                <li><code>financial_condition</code></li>
-                <li><code>annual_cash_flow</code></li>
-                <li><code>new_tech_licenses</code></li>
-                <li><code>new_tech_platform</code></li>
-                <li><code>employees</code></li>
+                <li>Financial Results — <code>financial_results</code></li>
+                <li>Revenue across Different Streams — <code>revenue_streams</code></li>
+                <li>Revenue by Technology — <code>tech</code></li>
+                <li>Royalty Revenue by Wafer Size — <code>wafer_size</code></li>
               </ul>
-              <button onclick="openExcelFile()" class="action-btn" style="margin-top:10px;">📂 開啟 Excel</button>
             </div>
 
             <div class="feature-section">
